@@ -1,0 +1,67 @@
+name: verba
+description: Verba — AI Language Learning & Translation App
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+
+  # Navigation
+  go_router: ^14.2.7
+
+  # HTTP / API
+  dio: ^5.5.0
+
+  # Local Storage
+  shared_preferences: ^2.3.2
+
+  # Animations
+  flutter_animate: ^4.5.0
+
+  # Audio
+  just_audio: ^0.9.40
+  path_provider: ^2.1.4
+
+  # Speech recording (microphone input)
+  record: ^5.1.2
+
+  # Permissions
+  permission_handler: ^11.3.1
+
+  # Image Picker (for image translation)
+  image_picker: ^1.1.2
+
+  # Fonts & Icons
+  google_fonts: ^6.2.1
+  cupertino_icons: ^1.0.8
+
+  # UI Utilities
+  smooth_page_indicator: ^1.2.0+3
+  fl_chart: ^0.68.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+dependency_overrides:
+  # Pull latest record_linux (implements startStream) to match record_platform_interface 1.5.x
+  record_linux:
+    git:
+      url: https://github.com/llfbandit/record.git
+      path: record_linux
+      ref: master
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/animations/
