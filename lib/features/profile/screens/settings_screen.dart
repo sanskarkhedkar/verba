@@ -328,7 +328,7 @@ class _SwitchRow extends StatelessWidget {
       secondary: Icon(icon, color: AppColors.textSecondary, size: 20),
       title: Text(title, style: AppTypography.bodyM),
       value: value,
-      activeColor: AppColors.primaryStart,
+      activeThumbColor: AppColors.primaryStart,
       onChanged: onChanged,
     );
   }

@@ -1,7 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 import 'app.dart';
 import 'core/services/firebase_bootstrap_service.dart';
@@ -18,16 +19,21 @@ Future<void> main() async {
   }
 
   final firebaseOptions = DefaultFirebaseOptions.currentPlatform;
+  String? currentUserId;
   if (firebaseOptions != null) {
     await Firebase.initializeApp(options: firebaseOptions);
     await const FirebaseBootstrapService().configure();
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
   }
 
-  // Initialize RevenueCat (no-op when API keys are not set)
   try {
-    await RevenueCatService().initialize();
+    final revenueCatService = RevenueCatService();
+    await revenueCatService.initialize();
+    if (currentUserId != null) {
+      await revenueCatService.setUserId(currentUserId);
+    }
   } on Object {
-    // RevenueCat keys not configured yet — subscription features run in stub mode.
+    // Subscription features run in preview mode if RevenueCat cannot initialize.
   }
 
   runApp(ProviderScope(child: VerbaApp()));

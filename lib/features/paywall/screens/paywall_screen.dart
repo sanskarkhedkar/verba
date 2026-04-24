@@ -33,8 +33,21 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     final offerings =
         await ref.read(revenueCatServiceProvider).getOfferings();
     if (mounted) {
+      Map<String, dynamic>? selectedOffering;
+      for (final offering in offerings) {
+        final identifier = offering['identifier'] as String;
+        if (identifier == _selectedId || identifier.contains('annual')) {
+          selectedOffering = offering;
+          break;
+        }
+      }
+
       setState(() {
         _offerings = offerings;
+        if (offerings.isNotEmpty) {
+          _selectedId =
+              (selectedOffering ?? offerings.first)['identifier'] as String;
+        }
         _loading = false;
       });
     }
@@ -59,6 +72,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
             .updateSubscription(uid, isPremium: true);
       }
       if (mounted) context.pop();
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Purchase could not be completed.')),
+      );
     }
 
     if (mounted) setState(() => _purchasing = false);
@@ -81,6 +98,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         );
         context.pop();
       }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No active purchases found.')),
+      );
     }
     if (mounted) setState(() => _purchasing = false);
   }

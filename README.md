@@ -46,6 +46,8 @@ Create a `.env` file in the root of the project directory with the following key
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
 ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
+FIREBASE_ANDROID_API_KEY=your_firebase_android_api_key_here
+FIREBASE_IOS_API_KEY=your_firebase_ios_api_key_here
 REVENUECAT_API_KEY_IOS=your_revenuecat_ios_key_here
 REVENUECAT_API_KEY_ANDROID=your_revenuecat_android_key_here
 ```
