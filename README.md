@@ -1,16 +1,78 @@
-# verba
+# Verba - AI Language Learning App
 
-A new Flutter project.
+Verba is an AI-powered language learning companion built with Flutter. It utilizes cutting-edge AI technologies to provide interactive voice conversations, personalized learning paths, and instant translations, gamifying the language learning journey.
+
+## Features
+- **AI Conversations**: Practice speaking with Gemini-powered AI responses.
+- **Natural Voice Output**: Uses ElevenLabs TTS for human-like speech.
+- **Multi-Modal Translation**: Voice, text, and image (OCR) translation tools.
+- **Gamified Learning**: Earn XP, build streaks, and unlock achievements.
+- **Premium Subscription**: Handled via RevenueCat.
+
+## Tech Stack
+- **Framework**: Flutter
+- **State Management**: Riverpod (`flutter_riverpod`)
+- **Backend & Auth**: Firebase (Auth, Firestore, Storage)
+- **AI Models**: Google Gemini (LLM) & ElevenLabs (TTS/Voice)
+- **In-App Purchases**: RevenueCat
+- **Routing**: go_router
+
+---
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+### Prerequisites
+Before you begin, ensure you have the following installed:
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) (latest stable version recommended)
+- [Android Studio](https://developer.android.com/studio) or [VS Code](https://code.visualstudio.com/)
+- An active Firebase Project
+- API Keys for Gemini, ElevenLabs, and RevenueCat.
 
-A few resources to get you started if this is your first Flutter project:
+### 1. Clone the repository
+```bash
+git clone https://github.com/sanskarkhedkar/verba.git
+cd verba
+git checkout dev
+```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### 2. Install Dependencies
+```bash
+flutter pub get
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### 3. Environment Variables
+The app requires an environment file to securely store API keys. 
+Create a `.env` file in the root of the project directory with the following keys:
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
+REVENUECAT_API_KEY_IOS=your_revenuecat_ios_key_here
+REVENUECAT_API_KEY_ANDROID=your_revenuecat_android_key_here
+```
+
+### 4. Firebase Configuration
+To connect the app to Firebase, you need to add your platform-specific configuration files:
+- **Android**: Place your `google-services.json` file inside `android/app/`.
+- **iOS**: Place your `GoogleService-Info.plist` file inside `ios/Runner/`.
+
+*Note: These files are ignored by git to protect your Firebase credentials.*
+
+### 5. Code Generation (Optional)
+If you modify Riverpod models or Freezed classes, you may need to run the build runner to regenerate the code:
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
+### 6. Run the App
+Launch an emulator or connect a physical device, then run:
+```bash
+flutter run
+```
+
+---
+
+## Project Structure
+The project follows a feature-first architecture to keep things modular and scalable:
+- `lib/core/`: Common utilities, themes, services, and shared widgets.
+- `lib/features/`: Contains feature modules (e.g., `learn`, `speak`, `home`, `profile`, `tools`).
+- `lib/main.dart`: The entry point of the application.
