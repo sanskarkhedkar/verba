@@ -51,6 +51,12 @@ class RevenueCatService {
     return _isPremium;
   }
 
+  /// Immediately marks the user as premium without a network round-trip.
+  /// Use this when the purchase result is already confirmed (PaywallResult.purchased).
+  void markPremium() {
+    _isPremium = true;
+  }
+
   bool _hasPremiumEntitlement(CustomerInfo info) {
     return _premiumEntitlementIds.any(info.entitlements.active.containsKey);
   }

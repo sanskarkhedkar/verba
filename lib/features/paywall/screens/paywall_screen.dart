@@ -66,12 +66,14 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     if (mounted) context.pop();
   }
 
-  /// Refresh RC local cache → write Firestore → force provider recompute.
+  /// Mark premium → write Firestore → force provider recompute.
   Future<void> _syncPremium() async {
-    // 1. Refresh RC local cache — native paywall doesn't update _isPremium
+    // 1. Trust PaywallResult.purchased directly; getCustomerInfo() can return
+    //    stale data immediately after a native paywall purchase.
     final rcService = ref.read(revenueCatServiceProvider);
     if (rcService.isInitialized) {
-      await rcService.refreshPremium();
+      rcService.markPremium();
+      rcService.refreshPremium(); // background sync, don't await
     }
     // 2. Write to Firestore (set+merge so it works even if document is missing)
     final uid = ref.read(authServiceProvider).currentUser?.uid;

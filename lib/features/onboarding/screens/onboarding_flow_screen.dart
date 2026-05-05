@@ -724,6 +724,8 @@ class _PaywallAutoStepState extends ConsumerState<_PaywallAutoStep> {
         if (result == PaywallResult.purchased ||
             result == PaywallResult.restored) {
           ref.read(analyticsServiceProvider).logPaywallPurchased();
+          rcService.markPremium();
+          rcService.refreshPremium(); // background sync
           final uid =
               ref.read(authServiceProvider).currentUser?.uid;
           if (uid != null) {
@@ -732,6 +734,7 @@ class _PaywallAutoStepState extends ConsumerState<_PaywallAutoStep> {
                 .updateSubscription(uid, isPremium: true)
                 .catchError((_) {});
           }
+          if (mounted) ref.invalidate(premiumStatusProvider);
         } else {
           ref.read(analyticsServiceProvider).logPaywallDismissed();
         }

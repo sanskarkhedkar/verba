@@ -289,6 +289,7 @@ For questions about these terms, contact us at legal@verba.app''');
               .updateSubscription(uid, isPremium: true)
               .catchError((_) {});
         }
+        if (mounted) ref.invalidate(premiumStatusProvider);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Purchases restored successfully!')),
@@ -640,7 +641,7 @@ class _SwitchRow extends StatelessWidget {
       secondary: Icon(icon, color: AppColors.textSecondary, size: 20),
       title: Text(title, style: AppTypography.bodyM),
       value: value,
-      activeColor: AppColors.primaryStart,
+      activeThumbColor: AppColors.primaryStart,
       onChanged: onChanged,
     );
   }
