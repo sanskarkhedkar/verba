@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,6 +43,7 @@ class _VerbaAppState extends ConsumerState<VerbaApp> {
   StreamSubscription<RemoteMessage>? _foregroundSub;
   StreamSubscription<RemoteMessage>? _tapSub;
   StreamSubscription<String>? _tokenRefreshSub;
+  StreamSubscription<User?>? _premiumSyncSub;
 
   @override
   void initState() {
@@ -122,24 +124,34 @@ class _VerbaAppState extends ConsumerState<VerbaApp> {
     );
 
     _setupFcm();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _syncPremiumStatus());
+    _schedulePremiumSync();
   }
 
-  /// On startup, re-verify premium with RevenueCat and patch Firestore if needed.
-  Future<void> _syncPremiumStatus() async {
-    try {
-      final user = ref.read(authUserProvider).valueOrNull;
+  /// Listen for the first real (non-anonymous) auth state, then sync RC → Firestore.
+  /// Uses the auth stream directly so it fires after Firebase resolves, not before.
+  void _schedulePremiumSync() {
+    _premiumSyncSub = ref
+        .read(authServiceProvider)
+        .authStateChanges
+        .listen((user) async {
       if (user == null || user.isAnonymous) return;
-      final rcService = ref.read(revenueCatServiceProvider);
-      if (!rcService.isInitialized) return;
-      final isPremium = await rcService.refreshPremium();
-      if (isPremium) {
-        await ref
-            .read(firestoreServiceProvider)
-            .updateSubscription(user.uid, isPremium: true)
-            .catchError((_) {});
-      }
-    } catch (_) {}
+      // One-shot: cancel once we have a real user
+      await _premiumSyncSub?.cancel();
+      _premiumSyncSub = null;
+
+      try {
+        final rcService = ref.read(revenueCatServiceProvider);
+        if (!rcService.isInitialized) return;
+        final isPremium = await rcService.refreshPremium();
+        if (isPremium && mounted) {
+          await ref
+              .read(firestoreServiceProvider)
+              .updateSubscription(user.uid, isPremium: true)
+              .catchError((_) {});
+          ref.invalidate(premiumStatusProvider);
+        }
+      } catch (_) {}
+    });
   }
 
   @override
@@ -147,6 +159,7 @@ class _VerbaAppState extends ConsumerState<VerbaApp> {
     _foregroundSub?.cancel();
     _tapSub?.cancel();
     _tokenRefreshSub?.cancel();
+    _premiumSyncSub?.cancel();
     super.dispose();
   }
 

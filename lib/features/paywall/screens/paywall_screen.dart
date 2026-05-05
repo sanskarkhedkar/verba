@@ -53,36 +53,36 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
     try {
       final result = await RevenueCatUI.presentPaywall(offering: offering);
-      // ignore: avoid_print
-      print('[Paywall] RevenueCatUI.presentPaywall result: $result');
       if (!mounted) return;
       if (result == PaywallResult.purchased || result == PaywallResult.restored) {
-        _syncPremium();
-        context.pop();
-      } else if (result == PaywallResult.notPresented) {
-        // Offering exists but has no Paywall template configured in RC dashboard.
-        _showNoTemplateDialog();
+        await _syncPremium();
+        if (mounted) context.pop();
       } else {
-        // cancelled / error — just dismiss.
         context.pop();
       }
       return;
-    } catch (e) {
-      // ignore: avoid_print
-      print('[Paywall] RevenueCatUI.presentPaywall error: $e');
-    }
+    } catch (_) {}
 
     if (mounted) context.pop();
   }
 
-  void _syncPremium() {
+  /// Refresh RC local cache → write Firestore → force provider recompute.
+  Future<void> _syncPremium() async {
+    // 1. Refresh RC local cache — native paywall doesn't update _isPremium
+    final rcService = ref.read(revenueCatServiceProvider);
+    if (rcService.isInitialized) {
+      await rcService.refreshPremium();
+    }
+    // 2. Write to Firestore (set+merge so it works even if document is missing)
     final uid = ref.read(authServiceProvider).currentUser?.uid;
     if (uid != null) {
-      ref
+      await ref
           .read(firestoreServiceProvider)
           .updateSubscription(uid, isPremium: true)
           .catchError((_) {});
     }
+    // 3. Force premiumStatusProvider to recompute with fresh RC + Firestore data
+    if (mounted) ref.invalidate(premiumStatusProvider);
   }
 
   void _showWebFallback() {
@@ -93,29 +93,6 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           message: 'Subscriptions are managed through the iOS or Android app.',
           onClose: () => Navigator.of(context).pop(),
         ),
-      ),
-    );
-  }
-
-  void _showNoTemplateDialog() {
-    showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.bgSurface,
-        title: Text('Paywall not configured', style: AppTypography.heading3),
-        content: Text(
-          'The offering was found but has no Paywall template attached in the RevenueCat dashboard. Attach a template to the offering and try again.',
-          style: AppTypography.bodyM.copyWith(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              context.pop();
-            },
-            child: const Text('OK'),
-          ),
-        ],
       ),
     );
   }
