@@ -6,37 +6,16 @@ import '../../../core/constants/route_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/services/service_providers.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/gradient_text.dart';
-import '../../../core/widgets/verba_button.dart';
 import '../../onboarding/providers/onboarding_provider.dart';
 
-class ToolsScreen extends ConsumerStatefulWidget {
+class ToolsScreen extends ConsumerWidget {
   const ToolsScreen({super.key});
 
   @override
-  ConsumerState<ToolsScreen> createState() => _ToolsScreenState();
-}
-
-class _ToolsScreenState extends ConsumerState<ToolsScreen> {
-  final _controller =
-      TextEditingController(text: 'Good morning, how are you?');
-  String _result = 'Guten Morgen, wie geht es Ihnen?';
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _quickTranslate() {
-    setState(() {
-      _result = 'Guten Morgen, wie geht es Ihnen?'; // stub
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final onboarding = ref.watch(onboardingProvider);
     final lang = onboarding.targetLanguage.isEmpty
         ? 'German'
@@ -95,90 +74,31 @@ class _ToolsScreenState extends ConsumerState<ToolsScreen> {
         ),
         const SizedBox(height: AppSpacing.xl),
 
-        // Quick translate inline
-        Row(
-          children: [
-            Text('Quick Translate', style: AppTypography.heading3),
-            const Spacer(),
-            Text('English → $lang',
-                style: AppTypography.caption
-                    .copyWith(color: AppColors.textSecondary)),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        GlassCard(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: _controller,
-                minLines: 2,
-                maxLines: 4,
-                onChanged: (_) {},
-                decoration: const InputDecoration(
-                  hintText: 'Type here…',
-                  border: InputBorder.none,
-                ),
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: _quickTranslate,
-                  child: const Text('Translate →'),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        GlassCard(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(lang,
-                  style: AppTypography.caption
-                      .copyWith(color: AppColors.textSecondary)),
-              const SizedBox(height: AppSpacing.sm),
-              Text(_result, style: AppTypography.heading3),
-              const SizedBox(height: AppSpacing.lg),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.volume_up_rounded,
-                        color: AppColors.textAccent),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.copy_rounded,
-                        color: AppColors.textSecondary),
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.bookmark_border_rounded,
-                        color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-              VerbaButton(
-                label: 'Practice this phrase',
-                icon: Icons.record_voice_over_rounded,
-                onPressed: () => context.push(RouteConstants.lesson),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xl),
-
         // Phrasebook
         Text('Saved Phrases', style: AppTypography.heading3),
         const SizedBox(height: AppSpacing.md),
-        ...const [
-          _PhraseRow(phrase: 'Guten Morgen', translation: 'Good morning'),
-          _PhraseRow(phrase: 'Danke schön', translation: 'Thank you'),
-          _PhraseRow(phrase: 'Wie geht es Ihnen?', translation: 'How are you?'),
+        ...[
+          _PhraseRow(
+            phrase: 'Guten Morgen',
+            translation: 'Good morning',
+            onListen: () => ref
+                .read(elevenLabsServiceProvider)
+                .speak('Guten Morgen', lang),
+          ),
+          _PhraseRow(
+            phrase: 'Danke schön',
+            translation: 'Thank you',
+            onListen: () => ref
+                .read(elevenLabsServiceProvider)
+                .speak('Danke schön', lang),
+          ),
+          _PhraseRow(
+            phrase: 'Wie geht es Ihnen?',
+            translation: 'How are you?',
+            onListen: () => ref
+                .read(elevenLabsServiceProvider)
+                .speak('Wie geht es Ihnen?', lang),
+          ),
         ],
       ],
     );
@@ -229,9 +149,14 @@ class _ToolTile extends StatelessWidget {
 }
 
 class _PhraseRow extends StatelessWidget {
-  const _PhraseRow({required this.phrase, required this.translation});
+  const _PhraseRow({
+    required this.phrase,
+    required this.translation,
+    required this.onListen,
+  });
   final String phrase;
   final String translation;
+  final VoidCallback onListen;
 
   @override
   Widget build(BuildContext context) {
@@ -253,7 +178,7 @@ class _PhraseRow extends StatelessWidget {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: onListen,
             icon: const Icon(Icons.volume_up_rounded,
                 color: AppColors.textAccent, size: 20),
           ),

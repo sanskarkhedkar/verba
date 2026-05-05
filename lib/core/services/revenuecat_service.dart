@@ -56,6 +56,18 @@ class RevenueCatService {
     } catch (_) {}
   }
 
+  Future<Offering?> getCurrentOffering() async {
+    if (!_initialized) return null;
+    try {
+      final offerings = await Purchases.getOfferings();
+      // Prefer the "current" offering; fall back to first available.
+      return offerings.current ??
+          (offerings.all.isNotEmpty ? offerings.all.values.first : null);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getOfferings() async {
     if (_initialized) {
       try {

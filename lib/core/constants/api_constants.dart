@@ -19,15 +19,30 @@ abstract final class ApiConstants {
   static String get revenueCatApiKeyAndroid =>
       dotenv.env['REVENUECAT_API_KEY_ANDROID'] ?? '';
 
-  // ElevenLabs voice IDs by language
+  // Google Translate API
+  static String get googleTranslateApiKey =>
+      dotenv.env['GOOGLE_TRANSLATE_API_KEY'] ?? '';
+  static const googleTranslateUrl =
+      'https://translation.googleapis.com/language/translate/v2';
+
+  // ElevenLabs voice IDs by language (all used with eleven_multilingual_v2)
   static const voiceIds = {
+    'English': 'EXAVITQu4vr4xnSDxMaL',
     'German': 'pNInz6obpgDQGcFmaJgB',
-    'Spanish': 'EXAVITQu4vr4xnSDxMaL',
+    'Spanish': 'ErXwobaYiN019PkySvjV',
     'French': 'MF3mGyEYCl7XYWbV9V6O',
     'Italian': 'AZnzlk1XvdvUeBnXmlld',
     'Japanese': 'jBpfuIE2acCJs8JXaw8Y',
     'Korean': 'XB0fDUnXU5powFXDhCwa',
-    'English': 'EXAVITQu4vr4xnSDxMaL',
+    'Portuguese': 'onwK4e9ZLuTAKqWW03F9',
+    'Mandarin': 'XB0fDUnXU5powFXDhCwa',
+    'Arabic': 'zcAOhNBS3c14rBihAFp1',
+    'Hindi': 'SOYHLrjzK2X1ezoPC6cr',
+    'Turkish': 'IKne3meq5aSn9XLyUdCD',
+    'Dutch': 'TxGEqnHWrfWFTfGW9XjX',
+    'Polish': 'ZQe5CZNOzWyzPSCn5a3c',
+    'Russian': '29vD33N1CtxCmqQRPOHJ',
+    'Swedish': 'pMsXgVXv3BLzUgSXRplE',
   };
 
   // Timeouts

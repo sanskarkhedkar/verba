@@ -133,6 +133,12 @@ class FirestoreService {
     return col.orderBy('savedAt', descending: true).limit(50).snapshots();
   }
 
+  Future<void> updateProfile(String uid, Map<String, dynamic> fields) =>
+      _users.doc(uid).update({
+        ...fields,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
   // ── Account deletion ──────────────────────────────────────────────────────
   Future<void> deleteUserData(String uid) async {
     final phrases = await _users.doc(uid).collection('phrases').get();

@@ -4,7 +4,15 @@
       "Bash(flutter pub *)",
       "Bash(flutter analyze *)",
       "Bash(flutter devices *)",
-      "Bash(flutter build *)"
+      "Bash(flutter build *)",
+      "WebFetch(domain:pub.dev)",
+      "WebFetch(domain:www.revenuecat.com)",
+      "WebFetch(domain:docs.revenuecat.com)",
+      "WebSearch",
+      "Bash(flutter run *)",
+      "Bash(flutter emulators *)",
+      "Bash(adb -s 70adca71 logcat -d)",
+      "Bash(dart run *)"
     ]
   }
 }

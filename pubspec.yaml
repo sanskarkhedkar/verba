@@ -18,6 +18,7 @@ dependencies:
   # Firebase
   firebase_core: ^4.7.0
   firebase_auth: ^6.4.0
+  firebase_analytics: ^12.3.0
   cloud_firestore: ^6.3.0
   firebase_messaging: ^16.2.0
   firebase_remote_config: ^6.4.0
@@ -42,6 +43,7 @@ dependencies:
 
   # Payments
   purchases_flutter: ^8.3.4
+  purchases_ui_flutter: ^8.3.4
 
   # Image / OCR
   image_picker: ^1.1.2
@@ -62,6 +64,18 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/App Logo.png"
+  web:
+    generate: true
+    image_path: "assets/images/App Logo.png"
+  windows:
+    generate: true
+    image_path: "assets/images/App Logo.png"
 
 flutter:
   uses-material-design: true

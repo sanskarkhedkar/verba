@@ -45,6 +45,7 @@ abstract final class AppConstants {
   ];
 
   static const languageEmojis = {
+    'English': '🇬🇧',
     'German': '🇩🇪',
     'Spanish': '🇪🇸',
     'French': '🇫🇷',

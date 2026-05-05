@@ -34,6 +34,31 @@ class _ImageTranslationScreenState
 
   final ImagePicker _picker = ImagePicker();
 
+  @override
+  void initState() {
+    super.initState();
+    // Recover image captured before MIUI killed the process
+    if (Platform.isAndroid) _recoverLostData();
+  }
+
+  Future<void> _recoverLostData() async {
+    try {
+      final response = await _picker.retrieveLostData();
+      if (response.isEmpty || !mounted) return;
+      final file = response.file;
+      if (file != null) {
+        setState(() {
+          _imageFile = File(file.path);
+          _isProcessing = true;
+          _ocrText = null;
+          _translation = null;
+          _error = null;
+        });
+        await _processPath(file.path);
+      }
+    } catch (_) {}
+  }
+
   Future<void> _pickImage({required bool fromCamera}) async {
     try {
       final source = fromCamera ? ImageSource.camera : ImageSource.gallery;
@@ -52,8 +77,21 @@ class _ImageTranslationScreenState
         _error = null;
       });
 
+      await _processPath(picked.path);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _error = 'Could not process image: $e';
+        });
+      }
+    }
+  }
+
+  Future<void> _processPath(String path) async {
+    try {
       final ocrText =
-          await ref.read(mlkitOcrServiceProvider).extractText(picked.path);
+          await ref.read(mlkitOcrServiceProvider).extractText(path);
 
       if (ocrText.trim().isEmpty) {
         if (mounted) {
@@ -78,12 +116,14 @@ class _ImageTranslationScreenState
           _translation = result.translatedText;
           _isProcessing = false;
         });
+        ref.read(analyticsServiceProvider).logTranslation(
+              'image', _sourceLang, _targetLang);
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isProcessing = false;
-          _error = 'Could not process image. Please try again.';
+          _error = 'Could not process image: $e';
         });
       }
     }

@@ -96,6 +96,9 @@ class LessonController extends StateNotifier<LessonState> {
           await ref.read(geminiServiceProvider).generateLesson(context);
       state = LessonState(lesson: lesson);
 
+      ref.read(analyticsServiceProvider).logLessonStart(
+            context.targetLanguage, lesson.title);
+
       // Pre-load ElevenLabs audio for first turn in background
       _preloadTurnAudio(lesson.turns.first, context.targetLanguage);
     } catch (e) {
@@ -218,6 +221,9 @@ class LessonController extends StateNotifier<LessonState> {
             state.xpEarned + (result.type == FeedbackType.success ? 5 : 0),
       );
 
+      ref.read(analyticsServiceProvider).logLessonTurnResult(
+            state.currentTurn, result.type.name);
+
       // On error feedback, play correct pronunciation slowly
       if (result.type == FeedbackType.error) {
         final language = ref.read(onboardingProvider).targetLanguage;
@@ -262,6 +268,9 @@ class LessonController extends StateNotifier<LessonState> {
   }
 
   Future<void> _persistLessonResult(Lesson lesson) async {
+    final language = ref.read(onboardingProvider).targetLanguage;
+    ref.read(analyticsServiceProvider).logLessonComplete(
+          language, state.xpEarned, lesson.turns.length);
     try {
       final uid = ref.read(authServiceProvider).currentUser?.uid;
       if (uid == null) return;

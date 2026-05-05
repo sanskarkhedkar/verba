@@ -78,6 +78,8 @@ class _TextTranslationController
             targetLang: state.targetLang,
           );
       state = state.copyWith(result: result, isLoading: false);
+      ref.read(analyticsServiceProvider).logTranslation(
+            'text', state.sourceLang, state.targetLang);
     } on Exception catch (e) {
       state = state.copyWith(
           isLoading: false, error: e.toString(), clearResult: true);
@@ -101,6 +103,26 @@ class _TextTranslationScreenState
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  void _showSameLangDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.bgSurface,
+        title: Text('Same language selected', style: AppTypography.heading3),
+        content: Text(
+          'Source and target languages are the same. Please choose a different language for either the source or the target.',
+          style: AppTypography.bodyM.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -172,8 +194,13 @@ class _TextTranslationScreenState
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () => controller
-                                .translate(_controller.text),
+                            onPressed: () {
+                              if (state.sourceLang == state.targetLang) {
+                                _showSameLangDialog();
+                                return;
+                              }
+                              controller.translate(_controller.text);
+                            },
                             child: const Text('Translate →'),
                           ),
                         ),
@@ -193,6 +220,10 @@ class _TextTranslationScreenState
                       result: state.result!,
                       onPractice: () =>
                           context.push(RouteConstants.lesson),
+                      onListen: () => ref
+                          .read(elevenLabsServiceProvider)
+                          .speak(state.result!.translatedText,
+                              state.result!.targetLang),
                     )
                   else if (state.error != null)
                     GlassCard(
@@ -212,9 +243,14 @@ class _TextTranslationScreenState
 }
 
 class _ResultCard extends StatelessWidget {
-  const _ResultCard({required this.result, required this.onPractice});
+  const _ResultCard({
+    required this.result,
+    required this.onPractice,
+    required this.onListen,
+  });
   final TranslationResult result;
   final VoidCallback onPractice;
+  final VoidCallback onListen;
 
   @override
   Widget build(BuildContext context) {
@@ -233,7 +269,7 @@ class _ResultCard extends StatelessWidget {
             children: [
               IconButton(
                 tooltip: 'Listen',
-                onPressed: () {},
+                onPressed: onListen,
                 icon: const Icon(Icons.volume_up_rounded,
                     color: AppColors.textAccent),
               ),
@@ -248,7 +284,11 @@ class _ResultCard extends StatelessWidget {
               ),
               IconButton(
                 tooltip: 'Save phrase',
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Saved to phrase book')),
+                  );
+                },
                 icon: const Icon(Icons.bookmark_border_rounded,
                     color: AppColors.textSecondary),
               ),

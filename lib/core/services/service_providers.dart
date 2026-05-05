@@ -1,5 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'analytics_service.dart';
 import 'auth_service.dart';
 import 'elevenlabs_service.dart';
 import 'fcm_service.dart';
@@ -9,6 +11,10 @@ import 'mlkit_ocr_service.dart';
 import 'revenuecat_service.dart';
 import 'stt_service.dart';
 import 'translation_service.dart';
+
+final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
+  return const AnalyticsService();
+});
 
 final geminiServiceProvider = Provider<GeminiService>((ref) {
   return const GeminiService();
@@ -49,4 +55,18 @@ final mlkitOcrServiceProvider = Provider<MlKitOcrService>((ref) {
   final service = MlKitOcrService();
   ref.onDispose(service.dispose);
   return service;
+});
+
+final authUserProvider = StreamProvider<User?>((ref) {
+  return ref.read(authServiceProvider).authStateChanges;
+});
+
+final userProfileStreamProvider =
+    StreamProvider<Map<String, dynamic>?>((ref) {
+  final user = ref.watch(authUserProvider).valueOrNull;
+  if (user == null || user.isAnonymous) return const Stream.empty();
+  return ref
+      .read(firestoreServiceProvider)
+      .getUserStream(user.uid)
+      .map((snap) => snap.data());
 });

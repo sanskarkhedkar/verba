@@ -41,4 +41,8 @@ class OnboardingController extends StateNotifier<OnboardingState> {
   void setDisplayName(String value) {
     state = state.copyWith(displayName: value.trim());
   }
+
+  void setNotificationTime(String value) {
+    state = state.copyWith(notificationTime: value);
+  }
 }

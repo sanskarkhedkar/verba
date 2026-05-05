@@ -32,6 +32,7 @@ class _VoiceTranslationScreenState
   bool _isProcessing = false;
   String? _transcript;
   String? _translation;
+  String? _error;
 
   final AudioRecorder _recorder = AudioRecorder();
 
@@ -47,6 +48,7 @@ class _VoiceTranslationScreenState
         _targetLang = tmp;
         _transcript = null;
         _translation = null;
+        _error = null;
       });
 
   Future<void> _toggleRecording() async {
@@ -95,6 +97,7 @@ class _VoiceTranslationScreenState
     setState(() {
       _isRecording = false;
       _isProcessing = true;
+      _error = null;
     });
 
     try {
@@ -102,21 +105,38 @@ class _VoiceTranslationScreenState
           .read(sttServiceProvider)
           .transcribeAudio(File(path), _sourceLang);
 
+      if (transcript.trim().isEmpty) {
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+            _error = 'No speech detected. Try speaking clearly into the mic.';
+          });
+        }
+        return;
+      }
+
       final result = await ref.read(translationServiceProvider).translateText(
-            transcript,
+            transcript.trim(),
             sourceLang: _sourceLang,
             targetLang: _targetLang,
           );
 
       if (mounted) {
         setState(() {
-          _transcript = transcript;
+          _transcript = transcript.trim();
           _translation = result.translatedText;
           _isProcessing = false;
         });
+        ref.read(analyticsServiceProvider).logTranslation(
+              'voice', _sourceLang, _targetLang);
       }
-    } catch (_) {
-      if (mounted) setState(() => _isProcessing = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _error = 'Translation failed: $e';
+        });
+      }
     }
   }
 
@@ -204,6 +224,22 @@ class _VoiceTranslationScreenState
                     .copyWith(color: AppColors.textSecondary),
               ),
               const SizedBox(height: AppSpacing.xl),
+              if (_error != null)
+                GlassCard(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline_rounded,
+                          color: AppColors.error, size: 18),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(_error!,
+                            style: AppTypography.bodyS
+                                .copyWith(color: AppColors.error)),
+                      ),
+                    ],
+                  ),
+                ),
               if (_transcript != null && _translation != null)
                 GlassCard(
                   padding: const EdgeInsets.all(AppSpacing.lg),

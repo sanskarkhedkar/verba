@@ -67,7 +67,7 @@ class ElevenLabsService {
             'Content-Type': 'application/json',
             'Accept': 'audio/mpeg',
           },
-          body: '''{"text":${_jsonString(text)},"model_id":"eleven_turbo_v2","voice_settings":{"stability":0.8,"similarity_boost":0.7,"speed":$speed}}''',
+          body: '''{"text":${_jsonString(text)},"model_id":"eleven_multilingual_v2","voice_settings":{"stability":0.8,"similarity_boost":0.7,"speed":$speed}}''',
         )
         .timeout(Duration(seconds: ApiConstants.apiTimeoutSeconds));
 

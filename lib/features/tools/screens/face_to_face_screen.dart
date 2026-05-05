@@ -37,6 +37,7 @@ class _FaceToFaceScreenState extends ConsumerState<FaceToFaceScreen> {
   String _langB = 'German';
   String? _activeRecordingSpeaker;
   bool _isProcessing = false;
+  String? _error;
   final List<_Turn> _turns = [];
   final AudioRecorder _recorder = AudioRecorder();
   Timer? _maxTimer;
@@ -59,7 +60,10 @@ class _FaceToFaceScreenState extends ConsumerState<FaceToFaceScreen> {
   }
 
   Future<void> _startRecording(String speaker) async {
-    final status = await Permission.microphone.request();
+    var status = await Permission.microphone.status;
+    if (!status.isGranted) {
+      status = await Permission.microphone.request();
+    }
     if (!status.isGranted) return;
 
     // Stop any existing recording first
@@ -98,6 +102,7 @@ class _FaceToFaceScreenState extends ConsumerState<FaceToFaceScreen> {
     setState(() {
       _activeRecordingSpeaker = null;
       _isProcessing = true;
+      _error = null;
     });
 
     if (path == null) {
@@ -113,8 +118,18 @@ class _FaceToFaceScreenState extends ConsumerState<FaceToFaceScreen> {
           .read(sttServiceProvider)
           .transcribeAudio(File(path), srcLang);
 
+      if (transcript.trim().isEmpty) {
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+            _error = 'No speech detected. Try again.';
+          });
+        }
+        return;
+      }
+
       final result = await ref.read(translationServiceProvider).translateText(
-            transcript,
+            transcript.trim(),
             sourceLang: srcLang,
             targetLang: tgtLang,
           );
@@ -123,14 +138,21 @@ class _FaceToFaceScreenState extends ConsumerState<FaceToFaceScreen> {
         setState(() {
           _turns.add(_Turn(
             speaker: speaker,
-            original: transcript,
+            original: transcript.trim(),
             translated: result.translatedText,
           ));
           _isProcessing = false;
         });
+        ref.read(analyticsServiceProvider).logTranslation(
+              'face_to_face', srcLang, tgtLang);
       }
-    } catch (_) {
-      if (mounted) setState(() => _isProcessing = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _error = 'Could not process audio: $e';
+        });
+      }
     }
   }
 
@@ -163,27 +185,43 @@ class _FaceToFaceScreenState extends ConsumerState<FaceToFaceScreen> {
               color: AppColors.bgElevated,
               padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    onPressed: () => context.pop(),
-                    icon: const Icon(Icons.close_rounded, size: 20),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => context.pop(),
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                      ),
+                      Expanded(
+                        child: Text(
+                          '$_langA ↔ $_langB',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.bodyS,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => setState(() {
+                          final tmp = _langA;
+                          _langA = _langB;
+                          _langB = tmp;
+                          _error = null;
+                        }),
+                        icon: const Icon(Icons.swap_vert_rounded, size: 20),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: Text(
-                      '$_langA ↔ $_langB',
-                      textAlign: TextAlign.center,
-                      style: AppTypography.bodyS,
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      child: Text(
+                        _error!,
+                        style: AppTypography.caption
+                            .copyWith(color: AppColors.error),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () => setState(() {
-                      final tmp = _langA;
-                      _langA = _langB;
-                      _langB = tmp;
-                    }),
-                    icon: const Icon(Icons.swap_vert_rounded, size: 20),
-                  ),
                 ],
               ),
             ),

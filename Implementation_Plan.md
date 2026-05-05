@@ -253,12 +253,12 @@ dependencies:
 - [x] Set up `.env` file reading (flutter_dotenv or similar) for API keys
 
 **Backend (Firebase):**
-- [ ] Create Firebase project: `verba-prod`
-- [ ] Enable Authentication providers: Google, Apple, Email/Password, Anonymous
-- [ ] Configure Firestore in production mode
+- [x] Create Firebase project: `verba-prod`
+- [x] Enable Authentication providers: Google, Apple, Email/Password, Anonymous
+- [x] Configure Firestore in production mode
 - [ ] Set up Firestore security rules (deny all by default → allow per auth)
-- [ ] Add `google-services.json` (Android) + `GoogleService-Info.plist` (iOS)
-- [ ] Deploy initial Remote Config with all flag keys from PRD 2 Section 4.3 (defaults)
+- [x] Add `google-services.json` (Android) + `GoogleService-Info.plist` (iOS)
+- [x] Deploy initial Remote Config with all flag keys from PRD 2 Section 4.3 (defaults)
 
 **Verification Checkpoint 1.1:**
 - App launches to blank screen without crash
@@ -300,8 +300,8 @@ dependencies:
   - Implement progress ring (CustomPainter arc)
   
 **Backend (Firebase):**
-- [ ] On Plan Loader screen entry: call `FirebaseAuth.instance.signInAnonymously()`
-- [ ] Store anonymous UID in OnboardingProvider state
+- [x] On Plan Loader screen entry: call `FirebaseAuth.instance.signInAnonymously()`
+- [x] Store anonymous UID in OnboardingProvider state
 - [x] Implement `AuthService.signInAnonymously()` method
 
 **Frontend (Flutter) continued:**
@@ -331,12 +331,12 @@ dependencies:
 - [x] On successful auth: link anonymous account to new credentials (preserve anonymous data)
 
 **Backend (Firebase):**
-- [ ] On auth success: batch write all OnboardingProvider state to Firestore
+- [x] On auth success: batch write all OnboardingProvider state to Firestore
   - Create `users/{uid}` document
   - Write `profile`, `progress`, `settings`, `subscription` sub-documents
   - Set `onboarding_complete: false` (set to true after paywall screen)
-- [ ] Implement `FirestoreService.createUserProfile(uid, onboardingState)` method
-- [ ] Set FCM token on user document: `users/{uid}/fcm_token`
+- [x] Implement `FirestoreService.createUserProfile(uid, onboardingState)` method
+- [x] Set FCM token on user document: `users/{uid}/fcm_token`
 
 **Verification Checkpoint 1.4:**
 - Google Sign-In works on Android
@@ -348,8 +348,8 @@ dependencies:
 
 #### 1.5 PAYWALL SCREEN (Week 4)
 **Frontend (Flutter):**
-- [ ] Initialize RevenueCat SDK in `main.dart` with platform API keys
-- [ ] Implement `RevenueCatService` class:
+- [x] Initialize RevenueCat SDK in `main.dart` with platform API keys
+- [x] Implement `RevenueCatService` class:
   - `getOfferings()` — fetch available packages
   - `purchasePackage(package)` — handle purchase
   - `restorePurchases()` — for restore button
@@ -358,8 +358,8 @@ dependencies:
   - Annual card highlighted with gradient border
   - Price displays loading state while RevenueCat loads
   - "Continue with limited access" skip option
-- [ ] On purchase success: update `users/{uid}/subscription.is_premium = true` in Firestore
-- [ ] On skip: mark `onboarding_complete: true`, navigate to home
+- [x] On purchase success: update `users/{uid}/subscription.is_premium = true` in Firestore
+- [x] On skip: mark `onboarding_complete: true`, navigate to home
 
 **Verification Checkpoint 1.5:**
 - RevenueCat initializes without error (use sandbox/test mode)
@@ -387,7 +387,7 @@ dependencies:
   - Unified interface with automatic fallback
 
 **Data Services:**
-- [ ] Implement `FirestoreService`:
+- [x] Implement `FirestoreService`:
   - `getUserProfile(uid)` — streams user document
   - `updateProgress(uid, xpGained, streakDate)` — atomic update
   - `saveLesson(uid, lesson)` — write lesson result
@@ -438,8 +438,8 @@ dependencies:
 - [x] Pre-load all ElevenLabs audio on lesson start (not during turn)
 
 **Backend:**
-- [ ] After each lesson: write result to `users/{uid}/lessons/{lessonId}`
-- [ ] Update `users/{uid}/progress` (XP, streak, words_learned_count)
+- [x] After each lesson: write result to `users/{uid}/lessons/{lessonId}`
+- [x] Update `users/{uid}/progress` (XP, streak, words_learned_count)
 - [ ] Check and write daily session to `users/{uid}/sessions/{sessionId}`
 
 **Verification Checkpoint 1.7 (CRITICAL):**
@@ -477,7 +477,7 @@ dependencies:
   - User info display
   - Progress summary
   - Settings navigation
-- [ ] Configure `go_router` deep links for FCM notification targets
+- [x] Configure `go_router` deep links for FCM notification targets
 
 **Verification Checkpoint 1.8:**
 - Tab navigation works correctly
@@ -513,8 +513,8 @@ Before proceeding to Phase 2, ALL of the following must pass:
 ### PHASE 2 — TASK BREAKDOWN
 
 #### 2.1 TEXT TRANSLATION (Week 9)
-- [ ] Implement `TranslationService.translateText(text, sourceLang, targetLang)`
-- [ ] Build `text_translation_screen.dart`:
+- [x] Implement `TranslationService.translateText(text, sourceLang, targetLang)`
+- [x] Build `text_translation_screen.dart`:
   - Source text input (glass styled, auto-focus)
   - Language selector dropdown (swap button)
   - Real-time translation (300ms debounce)
@@ -527,18 +527,18 @@ Before proceeding to Phase 2, ALL of the following must pass:
 - [ ] Save recent translations to local Hive storage (20 item ring buffer)
 
 #### 2.2 VOICE TRANSLATION (Week 10)
-- [ ] Build `voice_translation_screen.dart`:
+- [x] Build `voice_translation_screen.dart`:
   - Language pair header with swap
   - Large mic button ("Speak to translate")
   - STT → Translation API → result display pipeline
   - Optional ElevenLabs readout (toggle)
   - Practice bridge CTA on result
-- [ ] Implement voice translation pipeline (STT → Internal API → ElevenLabs optional)
+- [x] Implement voice translation pipeline (STT → Internal API → ElevenLabs optional)
 - [ ] Free tier: track voice translation count (Remote Config limit)
 
 #### 2.3 IMAGE TRANSLATION — OCR (Week 11)
-- [ ] Implement `MlKitOcrService.extractText(imagePath)` using `google_mlkit_text_recognition`
-- [ ] Build `image_translation_screen.dart`:
+- [x] Implement `MlKitOcrService.extractText(imagePath)` using `google_mlkit_text_recognition`
+- [x] Build `image_translation_screen.dart`:
   - Camera capture mode (using `camera` package)
   - Gallery pick fallback
   - Processing state (overlay shimmer on image)
@@ -548,12 +548,12 @@ Before proceeding to Phase 2, ALL of the following must pass:
 - [ ] Handle multiple text blocks with bounding box overlay
 
 #### 2.4 FACE-TO-FACE TRANSLATION (Week 12)
-- [ ] Build `face_to_face_screen.dart`:
+- [x] Build `face_to_face_screen.dart`:
   - Split screen (top/bottom for two speakers)
   - Large tap buttons per PRD 3 spec
   - STT → Translation → ElevenLabs per speaker turn
   - Conversation log scroll view
-- [ ] Implement two-speaker translation pipeline
+- [x] Implement two-speaker translation pipeline
 
 #### 2.5 PHRASEBOOK (Week 13)
 - [ ] Build `phrasebook_screen.dart`:
@@ -565,7 +565,7 @@ Before proceeding to Phase 2, ALL of the following must pass:
 - [ ] Implement phrase save flow (from translation and lesson screens)
 
 #### 2.6 PUSH NOTIFICATIONS (Week 13)
-- [ ] Implement `FcmService`:
+- [x] Implement `FcmService`:
   - Token registration + Firestore save
   - Foreground message handling
   - Background message handling (Firebase background handler)
@@ -626,13 +626,13 @@ Before proceeding to Phase 2, ALL of the following must pass:
 - [ ] Performance test animations on mid-range Android device
 
 #### 3.3 OFFLINE + CACHING (Week 16)
-- [ ] Implement Firestore offline persistence (`settings.persistenceEnabled = true`)
+- [x] Implement Firestore offline persistence (`settings.persistenceEnabled = true`)
 - [ ] Cache last 5 generated lessons in Hive for offline replay
 - [ ] Implement connectivity check → graceful degradation messaging
 - [ ] ElevenLabs audio cache validation on app launch (prune expired)
 
 #### 3.4 ANALYTICS + MONITORING (Week 17)
-- [ ] Add Firebase Analytics: key event tracking
+- [x] Add Firebase Analytics: key event tracking
   - `onboarding_screen_viewed` (screen_name)
   - `onboarding_completed`
   - `lesson_started` (lesson_id, lesson_type)

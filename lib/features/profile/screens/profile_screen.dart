@@ -3,13 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/route_constants.dart';
+import '../../../core/services/service_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/gradient_text.dart';
 import '../../../core/widgets/xp_progress_bar.dart';
-import '../../../core/utils/helpers.dart';
 import '../../onboarding/providers/onboarding_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -18,7 +19,21 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final onboarding = ref.watch(onboardingProvider);
-    final xp = 75; // TODO: connect to persisted UserProfile
+    final profileData = ref.watch(userProfileStreamProvider).valueOrNull;
+
+    final xp = (profileData?['xp'] as int?) ?? 0;
+    final streak = (profileData?['streak'] as int?) ?? 0;
+    final words = (profileData?['wordsLearned'] as int?) ?? 0;
+    final lessons = (profileData?['lessonsCompleted'] as int?) ?? 0;
+    final displayName = (profileData?['displayName'] as String?)
+        ?.isNotEmpty == true
+        ? profileData!['displayName'] as String
+        : onboarding.displayName.isNotEmpty
+            ? onboarding.displayName
+            : 'Verba Learner';
+    final lang = onboarding.targetLanguage.isEmpty
+        ? 'Language'
+        : onboarding.targetLanguage;
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -48,14 +63,9 @@ class ProfileScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(displayName, style: AppTypography.heading3),
                     Text(
-                      onboarding.displayName.isEmpty
-                          ? 'Verba Learner'
-                          : onboarding.displayName,
-                      style: AppTypography.heading3,
-                    ),
-                    Text(
-                      '${onboarding.targetLanguage.isEmpty ? 'Language' : onboarding.targetLanguage} · ${Helpers.xpLevelLabel(xp)}',
+                      '$lang · ${Helpers.xpLevelLabel(xp)}',
                       style: AppTypography.bodyS
                           .copyWith(color: AppColors.textSecondary),
                     ),
@@ -64,7 +74,7 @@ class ProfileScreen extends ConsumerWidget {
                         value: Helpers.xpProgress(xp), height: 4),
                     const SizedBox(height: 4),
                     Text(
-                      '$xp XP · ${Helpers.xpToNextLevel(xp)} to ${Helpers.xpLevelLabel(xp + 1)}',
+                      '$xp XP · ${Helpers.xpToNextLevel(xp)} XP to next level',
                       style: AppTypography.caption
                           .copyWith(color: AppColors.textAccent),
                     ),
@@ -79,15 +89,17 @@ class ProfileScreen extends ConsumerWidget {
         // Quick stats row
         Row(
           children: [
-            _StatChip(label: 'Streak', value: '1 day',
+            _StatChip(
+                label: 'Streak',
+                value: '$streak ${streak == 1 ? "day" : "days"}',
                 icon: Icons.local_fire_department_rounded,
                 color: AppColors.warning),
             const SizedBox(width: AppSpacing.md),
-            _StatChip(label: 'Words', value: '3',
+            _StatChip(label: 'Words', value: '$words',
                 icon: Icons.translate_rounded,
                 color: AppColors.textAccent),
             const SizedBox(width: AppSpacing.md),
-            _StatChip(label: 'Lessons', value: '1',
+            _StatChip(label: 'Lessons', value: '$lessons',
                 icon: Icons.menu_book_rounded,
                 color: AppColors.success),
           ],

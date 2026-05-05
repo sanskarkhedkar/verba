@@ -1,18 +1,37 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class AuthService {
   const AuthService();
 
+  bool get _isReady {
+    try {
+      Firebase.app();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   FirebaseAuth get _auth => FirebaseAuth.instance;
 
-  User? get currentUser => _auth.currentUser;
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  User? get currentUser {
+    if (!_isReady) return null;
+    return _auth.currentUser;
+  }
+
+  Stream<User?> get authStateChanges {
+    if (!_isReady) return const Stream.empty();
+    return _auth.authStateChanges();
+  }
 
   // ── Anonymous ──────────────────────────────────────────────────────────────
-  Future<UserCredential> signInAnonymously() =>
-      _auth.signInAnonymously();
+  Future<UserCredential> signInAnonymously() {
+    if (!_isReady) throw Exception('Firebase not initialized');
+    return _auth.signInAnonymously();
+  }
 
   // ── Google ─────────────────────────────────────────────────────────────────
   Future<UserCredential> signInWithGoogle() async {
@@ -26,9 +45,19 @@ class AuthService {
     );
 
     final currentUser = _auth.currentUser;
-    // Link anonymous account to Google, or sign in fresh
     if (currentUser != null && currentUser.isAnonymous) {
-      return currentUser.linkWithCredential(credential);
+      try {
+        return await currentUser.linkWithCredential(credential);
+      } on FirebaseAuthException catch (e) {
+        // Account already exists — just sign in directly
+        if (e.code == 'credential-already-in-use' ||
+            e.code == 'email-already-in-use' ||
+            e.code == 'account-exists-with-different-credential') {
+          return _auth.signInWithCredential(
+              e.credential ?? credential);
+        }
+        rethrow;
+      }
     }
     return _auth.signInWithCredential(credential);
   }
