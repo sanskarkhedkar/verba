@@ -4,13 +4,13 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 
 import '../constants/api_constants.dart';
 
-class RevenueCatService {
+class RevenueCatService extends ChangeNotifier {
   factory RevenueCatService() => _instance;
 
   RevenueCatService._();
 
   static final RevenueCatService _instance = RevenueCatService._();
-  static const _premiumEntitlementIds = {'premium_access', 'premium'};
+  static const _premiumEntitlementIds = {'pro'};
 
   bool _initialized = false;
   bool _isPremium = false;
@@ -33,15 +33,26 @@ class RevenueCatService {
     await Purchases.setLogLevel(LogLevel.debug);
     final config = PurchasesConfiguration(apiKey);
     await Purchases.configure(config);
+    
+    // Listen for updates in real-time (e.g. from background sync or other devices)
+    Purchases.addCustomerInfoUpdateListener((info) {
+      final oldStatus = _isPremium;
+      _isPremium = _hasPremiumEntitlement(info);
+      if (oldStatus != _isPremium) notifyListeners();
+    });
+
     _initialized = true;
     await _refreshPremiumStatus();
+    notifyListeners();
   }
 
   Future<void> _refreshPremiumStatus() async {
     if (!_initialized) return;
     try {
       final info = await Purchases.getCustomerInfo();
+      final oldStatus = _isPremium;
       _isPremium = _hasPremiumEntitlement(info);
+      if (oldStatus != _isPremium) notifyListeners();
     } catch (_) {}
   }
 
@@ -54,26 +65,34 @@ class RevenueCatService {
   /// Immediately marks the user as premium without a network round-trip.
   /// Use this when the purchase result is already confirmed (PaywallResult.purchased).
   void markPremium() {
-    _isPremium = true;
+    if (!_isPremium) {
+      _isPremium = true;
+      notifyListeners();
+    }
   }
 
   bool _hasPremiumEntitlement(CustomerInfo info) {
-    return _premiumEntitlementIds.any(info.entitlements.active.containsKey);
+    return info.entitlements.active.containsKey('pro');
   }
 
   Future<void> setUserId(String uid) async {
     if (!_initialized) return;
     try {
-      await Purchases.logIn(uid);
+      final result = await Purchases.logIn(uid);
+      final oldStatus = _isPremium;
+      _isPremium = _hasPremiumEntitlement(result.customerInfo);
+      if (oldStatus != _isPremium) notifyListeners();
     } catch (_) {}
   }
+
+  static const _targetOffering = 'worldwide-default-variation-a';
 
   Future<Offering?> getCurrentOffering() async {
     if (!_initialized) return null;
     try {
       final offerings = await Purchases.getOfferings();
-      // Prefer the "current" offering; fall back to first available.
-      return offerings.current ??
+      return offerings.all[_targetOffering] ??
+          offerings.current ??
           (offerings.all.isNotEmpty ? offerings.all.values.first : null);
     } catch (_) {
       return null;
@@ -142,7 +161,9 @@ class RevenueCatService {
     if (_initialized && package != null) {
       try {
         final result = await Purchases.purchasePackage(package);
+        final oldStatus = _isPremium;
         _isPremium = _hasPremiumEntitlement(result);
+        if (oldStatus != _isPremium) notifyListeners();
         return _isPremium;
       } catch (e) {
         if (e is PlatformException) {
@@ -159,7 +180,9 @@ class RevenueCatService {
     if (_initialized) {
       try {
         final info = await Purchases.restorePurchases();
+        final oldStatus = _isPremium;
         _isPremium = _hasPremiumEntitlement(info);
+        if (oldStatus != _isPremium) notifyListeners();
         return _isPremium;
       } catch (_) {}
     }

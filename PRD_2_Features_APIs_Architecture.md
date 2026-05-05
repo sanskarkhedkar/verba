@@ -495,7 +495,7 @@ users/{userId}/saved_phrases (sub-collection)
 - `trial_offering` — 7-day free trial on annual (seasonal promotion)
 
 **Entitlements:**
-- `premium_access` — Unlocks all premium features
+- `pro` — Unlocks all premium features
 - `pro_pack_[language]` — Per-language premium content packs (future)
 
 ### 5.2 Paywall Placement Strategy
@@ -541,7 +541,7 @@ await Purchases.configure(
 ```dart
 Future<bool> isPremium() async {
   final customerInfo = await Purchases.getCustomerInfo();
-  return customerInfo.entitlements.active.containsKey('premium_access');
+  return customerInfo.entitlements.active.containsKey('pro');
 }
 ```
 
@@ -550,7 +550,7 @@ Future<bool> isPremium() async {
 Future<void> purchasePackage(Package package) async {
   try {
     final customerInfo = await Purchases.purchasePackage(package);
-    if (customerInfo.entitlements.active.containsKey('premium_access')) {
+    if (customerInfo.entitlements.active.containsKey('pro')) {
       // Update Firestore user.subscription.is_premium = true
       // Navigate to success screen
     }

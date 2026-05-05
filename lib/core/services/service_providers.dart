@@ -47,7 +47,7 @@ final fcmServiceProvider = Provider<FcmService>((ref) {
   return const FcmService();
 });
 
-final revenueCatServiceProvider = Provider<RevenueCatService>((ref) {
+final revenueCatServiceProvider = ChangeNotifierProvider<RevenueCatService>((ref) {
   return RevenueCatService();
 });
 
@@ -61,14 +61,19 @@ final authUserProvider = StreamProvider<User?>((ref) {
   return ref.read(authServiceProvider).authStateChanges;
 });
 
+/// Sticky in-session override. Set to true after any confirmed purchase/restore.
+/// Stays true for the life of the app session so UI never reverts.
+final premiumOverrideProvider = StateProvider<bool>((ref) => false);
+
 /// Single source of truth for premium status.
-/// Returns true if Firestore says premium OR RevenueCat local cache says premium.
+/// Priority: session override > Firestore > RC local cache.
 final premiumStatusProvider = Provider<bool>((ref) {
+  if (ref.watch(premiumOverrideProvider)) return true;
   final firestorePremium = ref.watch(userProfileStreamProvider).maybeWhen(
         data: (profile) => profile?['isPremium'] as bool? ?? false,
         orElse: () => false,
       );
-  final rcPremium = ref.read(revenueCatServiceProvider).isPremium;
+  final rcPremium = ref.watch(revenueCatServiceProvider).isPremium;
   return firestorePremium || rcPremium;
 });
 

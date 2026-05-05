@@ -34,6 +34,17 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     }
 
     final rcService = ref.read(revenueCatServiceProvider);
+    
+    // Check if they already have premium before doing anything. 
+    // This handles the case where the status refreshed in the background 
+    // or the previous screen was slightly behind.
+    final alreadyPremium = await rcService.refreshPremium();
+    if (alreadyPremium && mounted) {
+      await _syncPremium();
+      if (mounted) context.pop();
+      return;
+    }
+
     if (!rcService.isInitialized) {
       if (mounted) _showWebFallback();
       return;
@@ -57,25 +68,35 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       if (result == PaywallResult.purchased || result == PaywallResult.restored) {
         await _syncPremium();
         if (mounted) context.pop();
-      } else {
-        context.pop();
+        return;
       }
-      return;
-    } catch (_) {}
+    } catch (_) {
+      // presentPaywall can throw even after a successful purchase.
+      // Fall through to the RC check below.
+    }
 
-    if (mounted) context.pop();
+    // Catch-all: refresh RC to see if the purchase actually went through
+    // (handles exceptions and unexpected result codes).
+    if (mounted) {
+      final rcService = ref.read(revenueCatServiceProvider);
+      if (rcService.isInitialized) {
+        final isPremium = await rcService.refreshPremium();
+        if (isPremium && mounted) await _syncPremium();
+      }
+      if (mounted) context.pop();
+    }
   }
 
-  /// Mark premium → write Firestore → force provider recompute.
+  /// Sets the sticky override, marks RC, writes Firestore.
   Future<void> _syncPremium() async {
-    // 1. Trust PaywallResult.purchased directly; getCustomerInfo() can return
-    //    stale data immediately after a native paywall purchase.
+    // 1. Set sticky session override immediately — drives all UI right now.
+    if (mounted) ref.read(premiumOverrideProvider.notifier).state = true;
+
+    // 2. Mark RC singleton so rcPremium reads correctly on next provider eval.
     final rcService = ref.read(revenueCatServiceProvider);
-    if (rcService.isInitialized) {
-      rcService.markPremium();
-      rcService.refreshPremium(); // background sync, don't await
-    }
-    // 2. Write to Firestore (set+merge so it works even if document is missing)
+    if (rcService.isInitialized) rcService.markPremium();
+
+    // 3. Persist to Firestore so premium survives app restarts.
     final uid = ref.read(authServiceProvider).currentUser?.uid;
     if (uid != null) {
       await ref
@@ -83,8 +104,6 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
           .updateSubscription(uid, isPremium: true)
           .catchError((_) {});
     }
-    // 3. Force premiumStatusProvider to recompute with fresh RC + Firestore data
-    if (mounted) ref.invalidate(premiumStatusProvider);
   }
 
   void _showWebFallback() {

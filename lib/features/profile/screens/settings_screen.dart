@@ -289,7 +289,7 @@ For questions about these terms, contact us at legal@verba.app''');
               .updateSubscription(uid, isPremium: true)
               .catchError((_) {});
         }
-        if (mounted) ref.invalidate(premiumStatusProvider);
+        if (mounted) ref.read(premiumOverrideProvider.notifier).state = true;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Purchases restored successfully!')),

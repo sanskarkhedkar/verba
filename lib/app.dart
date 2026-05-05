@@ -144,11 +144,11 @@ class _VerbaAppState extends ConsumerState<VerbaApp> {
         if (!rcService.isInitialized) return;
         final isPremium = await rcService.refreshPremium();
         if (isPremium && mounted) {
+          ref.read(premiumOverrideProvider.notifier).state = true;
           await ref
               .read(firestoreServiceProvider)
               .updateSubscription(user.uid, isPremium: true)
               .catchError((_) {});
-          ref.invalidate(premiumStatusProvider);
         }
       } catch (_) {}
     });
