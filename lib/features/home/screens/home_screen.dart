@@ -143,9 +143,7 @@ class _LearnTab extends ConsumerWidget {
         : onboarding.targetLanguage;
     final emoji = AppConstants.languageEmojis[currentLang] ?? '🌐';
     final code = _langCode[currentLang] ?? currentLang.substring(0, 2).toUpperCase();
-    final profileAsync = ref.watch(userProfileStreamProvider);
-    final isPremium =
-        profileAsync.valueOrNull?['isPremium'] as bool? ?? false;
+    final isPremium = ref.watch(premiumStatusProvider);
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),

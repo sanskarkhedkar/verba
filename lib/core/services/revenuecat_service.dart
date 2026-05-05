@@ -45,6 +45,12 @@ class RevenueCatService {
     } catch (_) {}
   }
 
+  /// Refreshes premium status from RevenueCat and returns the result.
+  Future<bool> refreshPremium() async {
+    await _refreshPremiumStatus();
+    return _isPremium;
+  }
+
   bool _hasPremiumEntitlement(CustomerInfo info) {
     return _premiumEntitlementIds.any(info.entitlements.active.containsKey);
   }

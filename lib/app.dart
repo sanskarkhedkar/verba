@@ -122,6 +122,24 @@ class _VerbaAppState extends ConsumerState<VerbaApp> {
     );
 
     _setupFcm();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncPremiumStatus());
+  }
+
+  /// On startup, re-verify premium with RevenueCat and patch Firestore if needed.
+  Future<void> _syncPremiumStatus() async {
+    try {
+      final user = ref.read(authUserProvider).valueOrNull;
+      if (user == null || user.isAnonymous) return;
+      final rcService = ref.read(revenueCatServiceProvider);
+      if (!rcService.isInitialized) return;
+      final isPremium = await rcService.refreshPremium();
+      if (isPremium) {
+        await ref
+            .read(firestoreServiceProvider)
+            .updateSubscription(user.uid, isPremium: true)
+            .catchError((_) {});
+      }
+    } catch (_) {}
   }
 
   @override

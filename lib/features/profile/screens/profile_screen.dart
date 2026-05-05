@@ -20,6 +20,7 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final onboarding = ref.watch(onboardingProvider);
     final profileData = ref.watch(userProfileStreamProvider).valueOrNull;
+    final isPremium = ref.watch(premiumStatusProvider);
 
     final xp = (profileData?['xp'] as int?) ?? 0;
     final streak = (profileData?['streak'] as int?) ?? 0;
@@ -127,14 +128,16 @@ class ProfileScreen extends ConsumerWidget {
           subtitle: 'Notifications, language, account',
           onTap: () => context.push(RouteConstants.settings),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        _NavTile(
-          icon: Icons.workspace_premium_rounded,
-          label: 'Upgrade to Premium',
-          subtitle: 'Unlimited lessons & tools',
-          onTap: () => context.push(RouteConstants.paywall),
-          accent: true,
-        ),
+        if (!isPremium) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _NavTile(
+            icon: Icons.workspace_premium_rounded,
+            label: 'Upgrade to Premium',
+            subtitle: 'Unlimited lessons & tools',
+            onTap: () => context.push(RouteConstants.paywall),
+            accent: true,
+          ),
+        ],
       ],
     );
   }

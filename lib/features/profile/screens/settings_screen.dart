@@ -346,9 +346,7 @@ For questions about these terms, contact us at legal@verba.app''');
   Widget build(BuildContext context) {
     final onboarding = ref.watch(onboardingProvider);
     final reminderTime = onboarding.notificationTime;
-    final profileAsync = ref.watch(userProfileStreamProvider);
-    final isPremium =
-        profileAsync.valueOrNull?['isPremium'] as bool? ?? false;
+    final isPremium = ref.watch(premiumStatusProvider);
 
     return Scaffold(
       body: SafeArea(

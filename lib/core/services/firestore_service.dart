@@ -113,10 +113,10 @@ class FirestoreService {
       });
 
   Future<void> updateSubscription(String uid, {required bool isPremium}) =>
-      _users.doc(uid).update({
+      _users.doc(uid).set({
         'isPremium': isPremium,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
 
   // ── Saved phrases (phrasebook) ─────────────────────────────────────────────
   Future<void> savePhrase(String uid, Map<String, dynamic> phrase) =>

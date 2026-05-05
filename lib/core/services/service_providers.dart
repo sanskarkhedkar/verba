@@ -61,6 +61,17 @@ final authUserProvider = StreamProvider<User?>((ref) {
   return ref.read(authServiceProvider).authStateChanges;
 });
 
+/// Single source of truth for premium status.
+/// Returns true if Firestore says premium OR RevenueCat local cache says premium.
+final premiumStatusProvider = Provider<bool>((ref) {
+  final firestorePremium = ref.watch(userProfileStreamProvider).maybeWhen(
+        data: (profile) => profile?['isPremium'] as bool? ?? false,
+        orElse: () => false,
+      );
+  final rcPremium = ref.read(revenueCatServiceProvider).isPremium;
+  return firestorePremium || rcPremium;
+});
+
 final userProfileStreamProvider =
     StreamProvider<Map<String, dynamic>?>((ref) {
   final user = ref.watch(authUserProvider).valueOrNull;
