@@ -12,7 +12,8 @@
       "Bash(flutter run *)",
       "Bash(flutter emulators *)",
       "Bash(adb -s 70adca71 logcat -d)",
-      "Bash(dart run *)"
+      "Bash(dart run *)",
+      "Bash(flutter --version)"
     ]
   }
 }
