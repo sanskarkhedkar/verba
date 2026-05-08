@@ -284,11 +284,16 @@ class LessonController extends StateNotifier<LessonState> {
     try {
       final uid = ref.read(authServiceProvider).currentUser?.uid;
       if (uid == null) return;
-      await ref.read(firestoreServiceProvider).recordLessonComplete(
+      final firestore = ref.read(firestoreServiceProvider);
+      await firestore.recordLessonComplete(
             uid,
             state.xpEarned,
             lesson.turns.length,
           );
+      if (state.turnsScored > 0) {
+        final avg = (state.totalAccuracy / state.turnsScored).round();
+        await firestore.recordLessonAccuracy(uid, avg);
+      }
     } catch (_) {
       // Firestore write failure is non-critical; ignore.
     }
