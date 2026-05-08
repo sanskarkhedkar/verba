@@ -118,6 +118,10 @@ class _ImageTranslationScreenState
         });
         ref.read(analyticsServiceProvider).logTranslation(
               'image', _sourceLang, _targetLang);
+        final uid = ref.read(authServiceProvider).currentUser?.uid;
+        if (uid != null) {
+          ref.read(firestoreServiceProvider).recordTranslation(uid).ignore();
+        }
       }
     } catch (e) {
       if (mounted) {

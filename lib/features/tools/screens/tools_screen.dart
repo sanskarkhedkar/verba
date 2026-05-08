@@ -9,17 +9,13 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/services/service_providers.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/gradient_text.dart';
-import '../../onboarding/providers/onboarding_provider.dart';
 
 class ToolsScreen extends ConsumerWidget {
   const ToolsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final onboarding = ref.watch(onboardingProvider);
-    final lang = onboarding.targetLanguage.isEmpty
-        ? 'German'
-        : onboarding.targetLanguage;
+    final phrasesAsync = ref.watch(savedPhrasesStreamProvider);
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -75,31 +71,56 @@ class ToolsScreen extends ConsumerWidget {
         const SizedBox(height: AppSpacing.xl),
 
         // Phrasebook
-        Text('Saved Phrases', style: AppTypography.heading3),
+        Row(
+          children: [
+            Expanded(
+              child: Text('Saved Phrases', style: AppTypography.heading3),
+            ),
+            phrasesAsync.maybeWhen(
+              data: (phrases) => phrases.length > 5
+                  ? TextButton(
+                      onPressed: () =>
+                          context.push(RouteConstants.savedPhrases),
+                      child: const Text('View all'),
+                    )
+                  : const SizedBox.shrink(),
+              orElse: () => const SizedBox.shrink(),
+            ),
+          ],
+        ),
         const SizedBox(height: AppSpacing.md),
-        ...[
-          _PhraseRow(
-            phrase: 'Guten Morgen',
-            translation: 'Good morning',
-            onListen: () => ref
-                .read(elevenLabsServiceProvider)
-                .speak('Guten Morgen', lang),
+        phrasesAsync.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.all(AppSpacing.md),
+            child: Center(child: CircularProgressIndicator()),
           ),
-          _PhraseRow(
-            phrase: 'Danke schön',
-            translation: 'Thank you',
-            onListen: () => ref
-                .read(elevenLabsServiceProvider)
-                .speak('Danke schön', lang),
+          error: (_, __) => Text(
+            "Couldn't load saved phrases",
+            style: AppTypography.bodyS.copyWith(color: AppColors.error),
           ),
-          _PhraseRow(
-            phrase: 'Wie geht es Ihnen?',
-            translation: 'How are you?',
-            onListen: () => ref
-                .read(elevenLabsServiceProvider)
-                .speak('Wie geht es Ihnen?', lang),
-          ),
-        ],
+          data: (phrases) {
+            if (phrases.isEmpty) {
+              return Text(
+                'No saved phrases yet. Tap the bookmark on any translation to save it here.',
+                style: AppTypography.bodyS
+                    .copyWith(color: AppColors.textSecondary),
+              );
+            }
+            final preview = phrases.take(5).toList();
+            return Column(
+              children: [
+                for (final p in preview)
+                  _PhraseRow(
+                    phrase: p.phrase,
+                    translation: p.translation,
+                    onListen: () => ref
+                        .read(elevenLabsServiceProvider)
+                        .speak(p.phrase, p.targetLang),
+                  ),
+              ],
+            );
+          },
+        ),
       ],
     );
   }

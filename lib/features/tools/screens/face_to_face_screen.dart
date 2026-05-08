@@ -145,6 +145,10 @@ class _FaceToFaceScreenState extends ConsumerState<FaceToFaceScreen> {
         });
         ref.read(analyticsServiceProvider).logTranslation(
               'face_to_face', srcLang, tgtLang);
+        final uid = ref.read(authServiceProvider).currentUser?.uid;
+        if (uid != null) {
+          ref.read(firestoreServiceProvider).recordTranslation(uid).ignore();
+        }
       }
     } catch (e) {
       if (mounted) {

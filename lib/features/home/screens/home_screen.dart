@@ -8,6 +8,7 @@ import '../../../core/services/service_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/helpers.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/gradient_text.dart';
 import '../../../core/widgets/verba_button.dart';
@@ -145,6 +146,12 @@ class _LearnTab extends ConsumerWidget {
     final code = _langCode[currentLang] ?? currentLang.substring(0, 2).toUpperCase();
     final isPremium = ref.watch(premiumStatusProvider);
 
+    final profileData = ref.watch(userProfileStreamProvider).valueOrNull;
+    final xp = (profileData?['xp'] as int?) ?? 0;
+    final streak = (profileData?['streak'] as int?) ?? 0;
+    final nextLevelLabel =
+        Helpers.xpLevelLabel(xp + Helpers.xpToNextLevel(xp));
+
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
@@ -199,16 +206,19 @@ class _LearnTab extends ConsumerWidget {
                   const Icon(Icons.local_fire_department_rounded,
                       color: AppColors.warning),
                   const SizedBox(width: AppSpacing.sm),
-                  Text('1 day streak', style: AppTypography.heading3),
+                  Text('$streak ${streak == 1 ? "day" : "days"} streak',
+                      style: AppTypography.heading3),
                   const Spacer(),
-                  Text('75 XP', style: AppTypography.bodyS),
+                  Text('$xp XP', style: AppTypography.bodyS),
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
-              const XpProgressBar(value: 0.15),
+              XpProgressBar(value: Helpers.xpProgress(xp)),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                '425 XP to A2',
+                Helpers.xpToNextLevel(xp) == 0
+                    ? 'Max level reached'
+                    : '${Helpers.xpToNextLevel(xp)} XP to $nextLevelLabel',
                 style: AppTypography.caption.copyWith(
                   color: AppColors.textSecondary,
                 ),

@@ -24,6 +24,8 @@ class LessonState {
     this.attempts = 0,
     this.loading = false,
     this.errorMessage,
+    this.totalAccuracy = 0,
+    this.turnsScored = 0,
   });
 
   final Lesson? lesson;
@@ -34,6 +36,8 @@ class LessonState {
   final int attempts;
   final bool loading;
   final String? errorMessage;
+  final int totalAccuracy;
+  final int turnsScored;
 
   bool get isComplete => lesson != null && currentTurn >= lesson!.turns.length;
   LessonTurn? get activeTurn {
@@ -52,6 +56,8 @@ class LessonState {
     bool? loading,
     String? errorMessage,
     bool clearError = false,
+    int? totalAccuracy,
+    int? turnsScored,
   }) {
     return LessonState(
       lesson: lesson ?? this.lesson,
@@ -62,6 +68,8 @@ class LessonState {
       attempts: attempts ?? this.attempts,
       loading: loading ?? this.loading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+      totalAccuracy: totalAccuracy ?? this.totalAccuracy,
+      turnsScored: turnsScored ?? this.turnsScored,
     );
   }
 }
@@ -219,6 +227,8 @@ class LessonController extends StateNotifier<LessonState> {
         feedback: result,
         xpEarned:
             state.xpEarned + (result.type == FeedbackType.success ? 5 : 0),
+        totalAccuracy: state.totalAccuracy + result.accuracy,
+        turnsScored: state.turnsScored + 1,
       );
 
       ref.read(analyticsServiceProvider).logLessonTurnResult(

@@ -86,3 +86,35 @@ final userProfileStreamProvider =
       .getUserStream(user.uid)
       .map((snap) => snap.data());
 });
+
+class SavedPhrase {
+  const SavedPhrase({
+    required this.id,
+    required this.phrase,
+    required this.translation,
+    required this.sourceLang,
+    required this.targetLang,
+  });
+  final String id;
+  final String phrase;
+  final String translation;
+  final String sourceLang;
+  final String targetLang;
+}
+
+final savedPhrasesStreamProvider =
+    StreamProvider<List<SavedPhrase>>((ref) {
+  final user = ref.watch(authUserProvider).valueOrNull;
+  if (user == null) return Stream.value(const []);
+  return ref.read(firestoreServiceProvider).getPhrases(user.uid).map(
+        (snap) => snap.docs
+            .map((d) => SavedPhrase(
+                  id: d.id,
+                  phrase: (d.data()['phrase'] as String?) ?? '',
+                  translation: (d.data()['translation'] as String?) ?? '',
+                  sourceLang: (d.data()['sourceLang'] as String?) ?? '',
+                  targetLang: (d.data()['targetLang'] as String?) ?? '',
+                ))
+            .toList(),
+      );
+});

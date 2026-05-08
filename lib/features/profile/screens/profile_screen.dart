@@ -12,6 +12,7 @@ import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/gradient_text.dart';
 import '../../../core/widgets/xp_progress_bar.dart';
 import '../../onboarding/providers/onboarding_provider.dart';
+import 'achievements_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -118,7 +119,8 @@ class ProfileScreen extends ConsumerWidget {
         _NavTile(
           icon: Icons.emoji_events_rounded,
           label: 'Achievements',
-          subtitle: '1 / 8 unlocked',
+          subtitle:
+              '${unlockedAchievementCount(profileData)} / $totalAchievementCount unlocked',
           onTap: () => context.push(RouteConstants.achievements),
         ),
         const SizedBox(height: AppSpacing.sm),

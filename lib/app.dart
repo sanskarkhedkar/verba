@@ -24,6 +24,7 @@ import 'features/profile/screens/settings_screen.dart';
 import 'features/speak/screens/conversation_screen.dart';
 import 'features/tools/screens/face_to_face_screen.dart';
 import 'features/tools/screens/image_translation_screen.dart';
+import 'features/tools/screens/saved_phrases_screen.dart';
 import 'features/tools/screens/text_translation_screen.dart';
 import 'features/tools/screens/voice_translation_screen.dart';
 
@@ -93,6 +94,10 @@ class _VerbaAppState extends ConsumerState<VerbaApp> {
         GoRoute(
           path: RouteConstants.faceToFace,
           builder: (context, state) => const FaceToFaceScreen(),
+        ),
+        GoRoute(
+          path: RouteConstants.savedPhrases,
+          builder: (context, state) => const SavedPhrasesScreen(),
         ),
 
         // ── Speak ─────────────────────────────────────────────────────────────

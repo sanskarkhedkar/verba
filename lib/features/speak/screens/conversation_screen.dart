@@ -1,20 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/services/service_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/gradient_text.dart';
 import '../../../core/widgets/mascot_widget.dart';
 
-class ConversationScreen extends StatefulWidget {
+class ConversationScreen extends ConsumerStatefulWidget {
   const ConversationScreen({super.key});
 
   @override
-  State<ConversationScreen> createState() => _ConversationScreenState();
+  ConsumerState<ConversationScreen> createState() =>
+      _ConversationScreenState();
 }
 
-class _ConversationScreenState extends State<ConversationScreen> {
+class _ConversationScreenState extends ConsumerState<ConversationScreen> {
+  bool _recorded = false;
+
+  @override
+  void dispose() {
+    if (_recorded) {
+      final uid = ref.read(authServiceProvider).currentUser?.uid;
+      if (uid != null) {
+        ref
+            .read(firestoreServiceProvider)
+            .recordConversation(uid)
+            .ignore();
+      }
+    }
+    super.dispose();
+  }
+
   final List<_ChatMessage> _messages = [
     const _ChatMessage(
       isAi: true,
@@ -39,6 +58,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           text: 'Ich möchte einen Kaffee, bitte.',
           translation: 'I would like a coffee, please.',
         ));
+        _recorded = true;
       });
       // AI response
       await Future<void>.delayed(const Duration(milliseconds: 500));

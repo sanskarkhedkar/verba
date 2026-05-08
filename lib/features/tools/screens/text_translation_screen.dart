@@ -81,6 +81,10 @@ class _TextTranslationController
       state = state.copyWith(result: result, isLoading: false);
       ref.read(analyticsServiceProvider).logTranslation(
             'text', state.sourceLang, state.targetLang);
+      final uid = ref.read(authServiceProvider).currentUser?.uid;
+      if (uid != null) {
+        ref.read(firestoreServiceProvider).recordTranslation(uid).ignore();
+      }
     } on Exception catch (e) {
       state = state.copyWith(
           isLoading: false, error: e.toString(), clearResult: true);
@@ -124,6 +128,32 @@ class _TextTranslationScreenState
         ],
       ),
     );
+  }
+
+  Future<void> _savePhrase(TranslationResult result) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final uid = ref.read(authServiceProvider).currentUser?.uid;
+    if (uid == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Sign in to save phrases')),
+      );
+      return;
+    }
+    try {
+      await ref.read(firestoreServiceProvider).savePhrase(uid, {
+        'phrase': result.translatedText,
+        'translation': result.originalText,
+        'sourceLang': result.sourceLang,
+        'targetLang': result.targetLang,
+      });
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Saved to phrasebook')),
+      );
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Couldn't save phrase. Try again.")),
+      );
+    }
   }
 
   void _showLanguageMismatchDialog(String sourceLang) {
@@ -252,6 +282,7 @@ class _TextTranslationScreenState
                           .read(elevenLabsServiceProvider)
                           .speak(state.result!.translatedText,
                               state.result!.targetLang),
+                      onSave: () => _savePhrase(state.result!),
                     )
                   else if (state.error != null)
                     GlassCard(
@@ -275,10 +306,12 @@ class _ResultCard extends StatelessWidget {
     required this.result,
     required this.onPractice,
     required this.onListen,
+    required this.onSave,
   });
   final TranslationResult result;
   final VoidCallback onPractice;
   final VoidCallback onListen;
+  final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -312,11 +345,7 @@ class _ResultCard extends StatelessWidget {
               ),
               IconButton(
                 tooltip: 'Save phrase',
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Saved to phrase book')),
-                  );
-                },
+                onPressed: onSave,
                 icon: const Icon(Icons.bookmark_border_rounded,
                     color: AppColors.textSecondary),
               ),

@@ -8,6 +8,7 @@ abstract final class RouteConstants {
   static const voiceTranslation = '/tools/voice';
   static const imageTranslation = '/tools/image';
   static const faceToFace = '/tools/face-to-face';
+  static const savedPhrases = '/tools/phrases';
   static const conversation = '/speak/conversation';
   static const progress = '/profile/progress';
   static const achievements = '/profile/achievements';

@@ -1,77 +1,121 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/services/service_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/gradient_text.dart';
 
-class AchievementsScreen extends StatelessWidget {
+class _AchievementDef {
+  const _AchievementDef({
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.xp,
+    required this.isUnlocked,
+  });
+  final String title;
+  final String description;
+  final IconData icon;
+  final int xp;
+  final bool Function(Map<String, dynamic> profile) isUnlocked;
+}
+
+int _intField(Map<String, dynamic> p, String key) =>
+    (p[key] as int?) ?? 0;
+
+const _achievements = <_AchievementDef>[
+  _AchievementDef(
+    title: 'First Step',
+    description: 'Complete your first lesson',
+    icon: Icons.flag_rounded,
+    xp: 25,
+    isUnlocked: _firstStep,
+  ),
+  _AchievementDef(
+    title: 'Quick Learner',
+    description: 'Complete 5 lessons',
+    icon: Icons.bolt_rounded,
+    xp: 50,
+    isUnlocked: _quickLearner,
+  ),
+  _AchievementDef(
+    title: 'Streak Starter',
+    description: 'Maintain a 3-day streak',
+    icon: Icons.local_fire_department_rounded,
+    xp: 75,
+    isUnlocked: _streakStarter,
+  ),
+  _AchievementDef(
+    title: 'Translator',
+    description: 'Use translation tools 10 times',
+    icon: Icons.translate_rounded,
+    xp: 50,
+    isUnlocked: _translator,
+  ),
+  _AchievementDef(
+    title: 'Phrase Master',
+    description: 'Learn 50 phrases',
+    icon: Icons.menu_book_rounded,
+    xp: 100,
+    isUnlocked: _phraseMaster,
+  ),
+  _AchievementDef(
+    title: 'Perfect Score',
+    description: 'Get 100% accuracy on a lesson',
+    icon: Icons.star_rounded,
+    xp: 150,
+    isUnlocked: _perfectScore,
+  ),
+  _AchievementDef(
+    title: 'Conversationalist',
+    description: 'Complete an AI conversation session',
+    icon: Icons.chat_bubble_rounded,
+    xp: 100,
+    isUnlocked: _conversationalist,
+  ),
+  _AchievementDef(
+    title: 'Committed',
+    description: 'Practice for 30 consecutive days',
+    icon: Icons.workspace_premium_rounded,
+    xp: 500,
+    isUnlocked: _committed,
+  ),
+];
+
+bool _firstStep(Map<String, dynamic> p) => _intField(p, 'lessonsCompleted') >= 1;
+bool _quickLearner(Map<String, dynamic> p) =>
+    _intField(p, 'lessonsCompleted') >= 5;
+bool _streakStarter(Map<String, dynamic> p) => _intField(p, 'streak') >= 3;
+bool _translator(Map<String, dynamic> p) =>
+    _intField(p, 'translationsCount') >= 10;
+bool _phraseMaster(Map<String, dynamic> p) =>
+    _intField(p, 'wordsLearned') >= 50;
+bool _perfectScore(Map<String, dynamic> p) =>
+    _intField(p, 'bestAccuracy') >= 100;
+bool _conversationalist(Map<String, dynamic> p) =>
+    _intField(p, 'conversationsCompleted') >= 1;
+bool _committed(Map<String, dynamic> p) => _intField(p, 'streak') >= 30;
+
+/// How many achievements are unlocked given a profile snapshot.
+int unlockedAchievementCount(Map<String, dynamic>? profile) {
+  if (profile == null) return 0;
+  return _achievements.where((a) => a.isUnlocked(profile)).length;
+}
+
+int get totalAchievementCount => _achievements.length;
+
+class AchievementsScreen extends ConsumerWidget {
   const AchievementsScreen({super.key});
 
-  static const _achievements = [
-    _Achievement(
-      title: 'First Step',
-      description: 'Complete your first lesson',
-      icon: Icons.flag_rounded,
-      unlocked: true,
-      xp: 25,
-    ),
-    _Achievement(
-      title: 'Quick Learner',
-      description: 'Complete 5 lessons',
-      icon: Icons.bolt_rounded,
-      unlocked: false,
-      xp: 50,
-    ),
-    _Achievement(
-      title: 'Streak Starter',
-      description: 'Maintain a 3-day streak',
-      icon: Icons.local_fire_department_rounded,
-      unlocked: false,
-      xp: 75,
-    ),
-    _Achievement(
-      title: 'Translator',
-      description: 'Use translation tools 10 times',
-      icon: Icons.translate_rounded,
-      unlocked: false,
-      xp: 50,
-    ),
-    _Achievement(
-      title: 'Phrase Master',
-      description: 'Learn 50 phrases',
-      icon: Icons.menu_book_rounded,
-      unlocked: false,
-      xp: 100,
-    ),
-    _Achievement(
-      title: 'Perfect Score',
-      description: 'Get 100% accuracy on a lesson',
-      icon: Icons.star_rounded,
-      unlocked: false,
-      xp: 150,
-    ),
-    _Achievement(
-      title: 'Conversationalist',
-      description: 'Complete an AI conversation session',
-      icon: Icons.chat_bubble_rounded,
-      unlocked: false,
-      xp: 100,
-    ),
-    _Achievement(
-      title: 'Committed',
-      description: 'Practice for 30 consecutive days',
-      icon: Icons.workspace_premium_rounded,
-      unlocked: false,
-      xp: 500,
-    ),
-  ];
-
   @override
-  Widget build(BuildContext context) {
-    final unlocked = _achievements.where((a) => a.unlocked).length;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(userProfileStreamProvider).valueOrNull ?? const {};
+    final unlocked = _achievements.where((a) => a.isUnlocked(profile)).length;
+
     return Scaffold(
       body: SafeArea(
         child: CustomScrollView(
@@ -112,8 +156,13 @@ class AchievementsScreen extends StatelessWidget {
                   mainAxisSpacing: AppSpacing.md,
                 ),
                 delegate: SliverChildBuilderDelegate(
-                  (ctx, i) =>
-                      _AchievementCard(achievement: _achievements[i]),
+                  (ctx, i) {
+                    final a = _achievements[i];
+                    return _AchievementCard(
+                      def: a,
+                      unlocked: a.isUnlocked(profile),
+                    );
+                  },
                   childCount: _achievements.length,
                 ),
               ),
@@ -128,8 +177,9 @@ class AchievementsScreen extends StatelessWidget {
 }
 
 class _AchievementCard extends StatelessWidget {
-  const _AchievementCard({required this.achievement});
-  final _Achievement achievement;
+  const _AchievementCard({required this.def, required this.unlocked});
+  final _AchievementDef def;
+  final bool unlocked;
 
   @override
   Widget build(BuildContext context) {
@@ -144,23 +194,21 @@ class _AchievementCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  gradient: achievement.unlocked
+                  gradient: unlocked
                       ? const LinearGradient(
                           colors: [AppColors.primaryStart, AppColors.primaryEnd],
                         )
                       : null,
-                  color: achievement.unlocked ? null : AppColors.bgElevated,
+                  color: unlocked ? null : AppColors.bgElevated,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  achievement.icon,
-                  color: achievement.unlocked
-                      ? Colors.white
-                      : AppColors.textTertiary,
+                  def.icon,
+                  color: unlocked ? Colors.white : AppColors.textTertiary,
                   size: 22,
                 ),
               ),
-              if (!achievement.unlocked)
+              if (!unlocked)
                 const Positioned(
                   right: 0,
                   bottom: 0,
@@ -171,39 +219,23 @@ class _AchievementCard extends StatelessWidget {
           ),
           const Spacer(),
           Text(
-            achievement.title,
+            def.title,
             style: AppTypography.bodyS.copyWith(
               fontWeight: FontWeight.w600,
-              color: achievement.unlocked
+              color: unlocked
                   ? AppColors.textPrimary
                   : AppColors.textSecondary,
             ),
           ),
           Text(
-            '+${achievement.xp} XP',
+            '+${def.xp} XP',
             style: AppTypography.caption.copyWith(
-              color: achievement.unlocked
-                  ? AppColors.textAccent
-                  : AppColors.textTertiary,
+              color:
+                  unlocked ? AppColors.textAccent : AppColors.textTertiary,
             ),
           ),
         ],
       ),
     );
   }
-}
-
-class _Achievement {
-  const _Achievement({
-    required this.title,
-    required this.description,
-    required this.icon,
-    required this.unlocked,
-    required this.xp,
-  });
-  final String title;
-  final String description;
-  final IconData icon;
-  final bool unlocked;
-  final int xp;
 }

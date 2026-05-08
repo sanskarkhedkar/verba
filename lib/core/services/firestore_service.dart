@@ -104,6 +104,38 @@ class FirestoreService {
     });
   }
 
+  Future<void> recordTranslation(String uid) =>
+      _users.doc(uid).set({
+        'translationsCount': FieldValue.increment(1),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+  Future<void> recordConversation(String uid) =>
+      _users.doc(uid).set({
+        'conversationsCompleted': FieldValue.increment(1),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+  /// Stores a per-lesson accuracy score and bumps `bestAccuracy` to the new
+  /// max in a single transaction.
+  Future<void> recordLessonAccuracy(String uid, int accuracy) async {
+    final ref = _users.doc(uid);
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      final data = snap.data() as Map<String, dynamic>?;
+      final current = (data?['bestAccuracy'] as int?) ?? 0;
+      final next = accuracy > current ? accuracy : current;
+      tx.set(
+        ref,
+        {
+          'bestAccuracy': next,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+    });
+  }
+
   Future<void> updateFcmToken(String uid, String token) =>
       _users.doc(uid).update({'fcmToken': token});
 
