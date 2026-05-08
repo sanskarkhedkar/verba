@@ -11,12 +11,14 @@ class VerbaButton extends StatefulWidget {
     super.key,
     this.icon,
     this.secondary = false,
+    this.trailingIcon = false,
   });
 
   final String label;
   final IconData? icon;
   final VoidCallback? onPressed;
   final bool secondary;
+  final bool trailingIcon;
 
   @override
   State<VerbaButton> createState() => _VerbaButtonState();
@@ -67,7 +69,7 @@ class _VerbaButtonState extends State<VerbaButton> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (widget.icon != null) ...[
+                if (widget.icon != null && !widget.trailingIcon) ...[
                   Icon(widget.icon, size: 20, color: AppColors.textPrimary),
                   const SizedBox(width: AppSpacing.sm),
                 ],
@@ -78,6 +80,10 @@ class _VerbaButtonState extends State<VerbaButton> {
                     style: AppTypography.button,
                   ),
                 ),
+                if (widget.icon != null && widget.trailingIcon) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  Icon(widget.icon, size: 20, color: AppColors.textPrimary),
+                ],
               ],
             ),
           ),

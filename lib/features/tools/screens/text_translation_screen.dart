@@ -9,6 +9,7 @@ import '../../../core/services/translation_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
+import '../../../core/utils/language_detector.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/verba_button.dart';
 import '../widgets/language_selector.dart';
@@ -125,6 +126,26 @@ class _TextTranslationScreenState
     );
   }
 
+  void _showLanguageMismatchDialog(String sourceLang) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.bgSurface,
+        title: Text('Language mismatch', style: AppTypography.heading3),
+        content: Text(
+          "Input text and language doesn't match. The text you entered doesn't appear to be in $sourceLang.",
+          style: AppTypography.bodyM.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(_textTranslationProvider);
@@ -197,6 +218,13 @@ class _TextTranslationScreenState
                             onPressed: () {
                               if (state.sourceLang == state.targetLang) {
                                 _showSameLangDialog();
+                                return;
+                              }
+                              final input = _controller.text.trim();
+                              if (input.isNotEmpty &&
+                                  !LanguageDetector.matchesLanguage(
+                                      input, state.sourceLang)) {
+                                _showLanguageMismatchDialog(state.sourceLang);
                                 return;
                               }
                               controller.translate(_controller.text);

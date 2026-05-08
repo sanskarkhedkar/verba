@@ -70,12 +70,6 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/images/App Logo.png"
-  web:
-    generate: true
-    image_path: "assets/images/App Logo.png"
-  windows:
-    generate: true
-    image_path: "assets/images/App Logo.png"
 
 flutter:
   uses-material-design: true

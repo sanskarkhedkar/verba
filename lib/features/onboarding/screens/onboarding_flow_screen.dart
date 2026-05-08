@@ -265,6 +265,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                 VerbaButton(
                   label: 'Continue',
                   icon: Icons.arrow_forward_rounded,
+                  trailingIcon: true,
                   onPressed: (_canContinue && !_isNavigating) ? _next : null,
                 ),
               ],
