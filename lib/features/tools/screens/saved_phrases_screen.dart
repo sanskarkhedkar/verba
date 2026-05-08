@@ -36,66 +36,65 @@ class SavedPhrasesScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               Expanded(
-                child: phrasesAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (_, __) => Center(
-                    child: Text("Couldn't load phrases",
+                child: Builder(builder: (_) {
+                  final phrases = phrasesAsync.maybeWhen(
+                    data: (p) => p,
+                    orElse: () => const <SavedPhrase>[],
+                  );
+                  if (phrasesAsync.isLoading && phrases.isEmpty) {
+                    return const Center(
+                        child: CircularProgressIndicator());
+                  }
+                  if (phrases.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No saved phrases yet.\nTap the bookmark on any translation to save it here.',
+                        textAlign: TextAlign.center,
                         style: AppTypography.bodyM
-                            .copyWith(color: AppColors.error)),
-                  ),
-                  data: (phrases) {
-                    if (phrases.isEmpty) {
-                      return Center(
-                        child: Text(
-                          'No saved phrases yet.\nTap the bookmark on any translation to save it here.',
-                          textAlign: TextAlign.center,
-                          style: AppTypography.bodyM.copyWith(
-                              color: AppColors.textSecondary),
+                            .copyWith(color: AppColors.textSecondary),
+                      ),
+                    );
+                  }
+                  return ListView.separated(
+                    itemCount: phrases.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.sm),
+                    itemBuilder: (_, i) {
+                      final p = phrases[i];
+                      return GlassCard(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.sm),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(p.phrase,
+                                      style: AppTypography.bodyM),
+                                  Text(p.translation,
+                                      style: AppTypography.caption
+                                          .copyWith(
+                                              color: AppColors
+                                                  .textSecondary)),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => ref
+                                  .read(elevenLabsServiceProvider)
+                                  .speak(p.phrase, p.targetLang),
+                              icon: const Icon(Icons.volume_up_rounded,
+                                  color: AppColors.textAccent, size: 20),
+                            ),
+                          ],
                         ),
                       );
-                    }
-                    return ListView.separated(
-                      itemCount: phrases.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: AppSpacing.sm),
-                      itemBuilder: (_, i) {
-                        final p = phrases[i];
-                        return GlassCard(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.md,
-                              vertical: AppSpacing.sm),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(p.phrase,
-                                        style: AppTypography.bodyM),
-                                    Text(p.translation,
-                                        style: AppTypography.caption
-                                            .copyWith(
-                                                color: AppColors
-                                                    .textSecondary)),
-                                  ],
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () => ref
-                                    .read(elevenLabsServiceProvider)
-                                    .speak(p.phrase, p.targetLang),
-                                icon: const Icon(Icons.volume_up_rounded,
-                                    color: AppColors.textAccent, size: 20),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
+                    },
+                  );
+                }),
               ),
             ],
           ),

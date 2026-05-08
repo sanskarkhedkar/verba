@@ -80,11 +80,14 @@ final premiumStatusProvider = Provider<bool>((ref) {
 final userProfileStreamProvider =
     StreamProvider<Map<String, dynamic>?>((ref) {
   final user = ref.watch(authUserProvider).valueOrNull;
-  if (user == null || user.isAnonymous) return const Stream.empty();
+  if (user == null) return Stream.value(null);
+  // Anonymous users get a profile doc on onboarding completion, so we stream
+  // it the same as for permanent accounts.
   return ref
       .read(firestoreServiceProvider)
       .getUserStream(user.uid)
-      .map((snap) => snap.data());
+      .map((snap) => snap.data())
+      .handleError((Object _) => null);
 });
 
 class SavedPhrase {
@@ -106,7 +109,10 @@ final savedPhrasesStreamProvider =
     StreamProvider<List<SavedPhrase>>((ref) {
   final user = ref.watch(authUserProvider).valueOrNull;
   if (user == null) return Stream.value(const []);
-  return ref.read(firestoreServiceProvider).getPhrases(user.uid).map(
+  return ref
+      .read(firestoreServiceProvider)
+      .getPhrases(user.uid)
+      .map(
         (snap) => snap.docs
             .map((d) => SavedPhrase(
                   id: d.id,
@@ -116,5 +122,6 @@ final savedPhrasesStreamProvider =
                   targetLang: (d.data()['targetLang'] as String?) ?? '',
                 ))
             .toList(),
-      );
+      )
+      .handleError((Object _) => const <SavedPhrase>[]);
 });

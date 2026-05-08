@@ -89,38 +89,38 @@ class ToolsScreen extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        phrasesAsync.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.all(AppSpacing.md),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (_, __) => Text(
-            "Couldn't load saved phrases",
-            style: AppTypography.bodyS.copyWith(color: AppColors.error),
-          ),
-          data: (phrases) {
-            if (phrases.isEmpty) {
-              return Text(
-                'No saved phrases yet. Tap the bookmark on any translation to save it here.',
-                style: AppTypography.bodyS
-                    .copyWith(color: AppColors.textSecondary),
-              );
-            }
-            final preview = phrases.take(5).toList();
-            return Column(
-              children: [
-                for (final p in preview)
-                  _PhraseRow(
-                    phrase: p.phrase,
-                    translation: p.translation,
-                    onListen: () => ref
-                        .read(elevenLabsServiceProvider)
-                        .speak(p.phrase, p.targetLang),
-                  ),
-              ],
+        Builder(builder: (_) {
+          final phrases = phrasesAsync.maybeWhen(
+            data: (p) => p,
+            orElse: () => const <SavedPhrase>[],
+          );
+          if (phrasesAsync.isLoading && phrases.isEmpty) {
+            return const Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: Center(child: CircularProgressIndicator()),
             );
-          },
-        ),
+          }
+          if (phrases.isEmpty) {
+            return Text(
+              'No saved phrases yet. Tap the bookmark on any translation to save it here.',
+              style: AppTypography.bodyS
+                  .copyWith(color: AppColors.textSecondary),
+            );
+          }
+          final preview = phrases.take(5).toList();
+          return Column(
+            children: [
+              for (final p in preview)
+                _PhraseRow(
+                  phrase: p.phrase,
+                  translation: p.translation,
+                  onListen: () => ref
+                      .read(elevenLabsServiceProvider)
+                      .speak(p.phrase, p.targetLang),
+                ),
+            ],
+          );
+        }),
       ],
     );
   }

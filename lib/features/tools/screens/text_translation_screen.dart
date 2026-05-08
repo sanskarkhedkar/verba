@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -149,9 +150,14 @@ class _TextTranslationScreenState
       messenger.showSnackBar(
         const SnackBar(content: Text('Saved to phrasebook')),
       );
-    } catch (_) {
+    } on FirebaseException catch (e) {
+      final msg = e.code == 'permission-denied'
+          ? 'Saving phrases is blocked by Firestore rules. Check your security rules.'
+          : "Couldn't save: ${e.message ?? e.code}";
+      messenger.showSnackBar(SnackBar(content: Text(msg)));
+    } catch (e) {
       messenger.showSnackBar(
-        const SnackBar(content: Text("Couldn't save phrase. Try again.")),
+        SnackBar(content: Text("Couldn't save: $e")),
       );
     }
   }
