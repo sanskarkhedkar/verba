@@ -86,7 +86,8 @@ const _langCode = {
 class _LearnTab extends ConsumerWidget {
   const _LearnTab();
 
-  void _showLanguagePicker(BuildContext context, WidgetRef ref, String currentLang) {
+  void _showLanguagePicker(
+      BuildContext context, WidgetRef ref, String currentLang) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.bgElevated,
@@ -94,14 +95,15 @@ class _LearnTab extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => ListView(
-        padding: const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.xl),
+        padding:
+            const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.xl),
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
             child: Text('Learning language', style: AppTypography.heading3),
           ),
-          ...AppConstants.supportedLanguages.map((lang) {
+          ...AppConstants.supportedLanguagesWithEnglish.map((lang) {
             final emoji = AppConstants.languageEmojis[lang] ?? '🌐';
             final code = _langCode[lang] ?? lang.substring(0, 2).toUpperCase();
             final isSelected = lang == currentLang;
@@ -114,16 +116,13 @@ class _LearnTab extends ConsumerWidget {
                   color: isSelected
                       ? AppColors.textAccent
                       : AppColors.textSecondary,
-                  fontWeight:
-                      isSelected ? FontWeight.w700 : FontWeight.normal,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
                 ),
               ),
               selected: isSelected,
               selectedTileColor: AppColors.glassBorder.withValues(alpha: 0.3),
               onTap: () {
-                ref
-                    .read(onboardingProvider.notifier)
-                    .setTargetLanguage(lang);
+                ref.read(onboardingProvider.notifier).setTargetLanguage(lang);
                 ref.read(analyticsServiceProvider).logLanguageChanged(lang);
                 Navigator.pop(ctx);
               },
@@ -143,14 +142,14 @@ class _LearnTab extends ConsumerWidget {
         ? 'German'
         : onboarding.targetLanguage;
     final emoji = AppConstants.languageEmojis[currentLang] ?? '🌐';
-    final code = _langCode[currentLang] ?? currentLang.substring(0, 2).toUpperCase();
+    final code =
+        _langCode[currentLang] ?? currentLang.substring(0, 2).toUpperCase();
     final isPremium = ref.watch(premiumStatusProvider);
 
     final profileData = ref.watch(userProfileStreamProvider).valueOrNull;
     final xp = (profileData?['xp'] as int?) ?? 0;
     final streak = (profileData?['streak'] as int?) ?? 0;
-    final nextLevelLabel =
-        Helpers.xpLevelLabel(xp + Helpers.xpToNextLevel(xp));
+    final nextLevelLabel = Helpers.xpLevelLabel(xp + Helpers.xpToNextLevel(xp));
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -174,8 +173,8 @@ class _LearnTab extends ConsumerWidget {
                     const SizedBox(width: 6),
                     Text(
                       code,
-                      style: AppTypography.bodyS.copyWith(
-                          fontWeight: FontWeight.w700),
+                      style: AppTypography.bodyS
+                          .copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(width: 2),
                     const Icon(Icons.keyboard_arrow_down_rounded,

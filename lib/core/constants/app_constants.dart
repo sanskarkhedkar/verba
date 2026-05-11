@@ -45,6 +45,11 @@ abstract final class AppConstants {
     'Swedish',
   ];
 
+  static final supportedLanguagesWithEnglish = List<String>.unmodifiable({
+    'English',
+    ...supportedLanguages,
+  });
+
   static const languageEmojis = {
     'English': '🇬🇧',
     'German': '🇩🇪',

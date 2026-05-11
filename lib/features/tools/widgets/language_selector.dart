@@ -35,8 +35,8 @@ class LanguageSelectorRow extends StatelessWidget {
         ),
         IconButton(
           onPressed: onSwap,
-          icon: const Icon(Icons.swap_horiz_rounded,
-              color: AppColors.textAccent),
+          icon:
+              const Icon(Icons.swap_horiz_rounded, color: AppColors.textAccent),
         ),
         Expanded(
           child: _LangChip(
@@ -105,13 +105,9 @@ class _LanguagePicker extends StatefulWidget {
 class _LanguagePickerState extends State<_LanguagePicker> {
   String _query = '';
 
-  List<String> get _filtered => [
-        'English',
-        ...AppConstants.supportedLanguages
-      ]
-          .where(
-              (l) => l.toLowerCase().contains(_query.toLowerCase()))
-          .toList();
+  List<String> get _filtered => AppConstants.supportedLanguagesWithEnglish
+      .where((l) => l.toLowerCase().contains(_query.toLowerCase()))
+      .toList();
 
   @override
   Widget build(BuildContext context) {
@@ -136,8 +132,7 @@ class _LanguagePickerState extends State<_LanguagePicker> {
                 final emoji = AppConstants.languageEmojis[l] ?? '🌍';
                 final selected = l == widget.selected;
                 return ListTile(
-                  leading: Text(emoji,
-                      style: const TextStyle(fontSize: 24)),
+                  leading: Text(emoji, style: const TextStyle(fontSize: 24)),
                   title: Text(l,
                       style: AppTypography.bodyM.copyWith(
                         color: selected

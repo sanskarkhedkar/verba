@@ -1,4 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -12,13 +13,13 @@ class LocalNotificationsService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  bool _timezoneInitialized = false;
 
   Future<void> initialize() async {
     if (_initialized) return;
-    tz_data.initializeTimeZones();
+    await _configureLocalTimezone();
 
-    const androidInit =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosInit = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -40,15 +41,28 @@ class LocalNotificationsService {
           importance: Importance.high,
         ),
       );
-      await androidImpl.requestNotificationsPermission();
-      await androidImpl.requestExactAlarmsPermission();
     }
+
+    _initialized = true;
+  }
+
+  Future<bool> requestPermissions() async {
+    if (!_initialized) await initialize();
+
+    var granted = true;
+
+    final androidImpl = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    final androidGranted = await androidImpl?.requestNotificationsPermission();
+    if (androidGranted != null) granted = androidGranted;
 
     final iosImpl = _plugin.resolvePlatformSpecificImplementation<
         IOSFlutterLocalNotificationsPlugin>();
-    await iosImpl?.requestPermissions(alert: true, badge: true, sound: true);
+    final iosGranted = await iosImpl?.requestPermissions(
+        alert: true, badge: true, sound: true);
+    if (iosGranted != null) granted = iosGranted;
 
-    _initialized = true;
+    return granted;
   }
 
   /// Schedule (or reschedule) a daily reminder at the given HH:mm time.
@@ -67,7 +81,7 @@ class LocalNotificationsService {
     await _plugin.zonedSchedule(
       _dailyReminderId,
       'Time to practice',
-      'Keep your streak going — five minutes is enough.',
+      'Keep your streak going - five minutes is enough.',
       scheduled,
       const NotificationDetails(
         android: AndroidNotificationDetails(
@@ -79,7 +93,7 @@ class LocalNotificationsService {
         ),
         iOS: DarwinNotificationDetails(),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: await _androidScheduleMode(),
       matchDateTimeComponents: DateTimeComponents.time,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
@@ -105,5 +119,28 @@ class LocalNotificationsService {
       scheduled = scheduled.add(const Duration(days: 1));
     }
     return scheduled;
+  }
+
+  Future<void> _configureLocalTimezone() async {
+    if (_timezoneInitialized) return;
+
+    tz_data.initializeTimeZones();
+    try {
+      final timezoneName = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timezoneName));
+    } on Object {
+      tz.setLocalLocation(tz.UTC);
+    }
+    _timezoneInitialized = true;
+  }
+
+  Future<AndroidScheduleMode> _androidScheduleMode() async {
+    final androidImpl = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    final canScheduleExact =
+        await androidImpl?.canScheduleExactNotifications() ?? false;
+    return canScheduleExact
+        ? AndroidScheduleMode.exactAllowWhileIdle
+        : AndroidScheduleMode.inexactAllowWhileIdle;
   }
 }

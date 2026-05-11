@@ -53,8 +53,9 @@ Future<void> main() async {
   try {
     final notifications = LocalNotificationsService();
     await notifications.initialize();
+    final reminderEnabled = prefs.getBool('reminder_enabled') ?? false;
     final savedTime = prefs.getString('reminder_time');
-    if (savedTime != null && savedTime.isNotEmpty) {
+    if (reminderEnabled && savedTime != null && savedTime.isNotEmpty) {
       await notifications.scheduleDailyReminder(savedTime);
     }
   } on Object {

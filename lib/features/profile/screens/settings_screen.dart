@@ -34,20 +34,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _loadNotificationsPref() async {
     final prefs = await SharedPreferences.getInstance();
-    final enabled = prefs.getBool('reminder_enabled') ?? true;
+    final enabled = prefs.getBool('reminder_enabled') ?? false;
     if (mounted) setState(() => _notifications = enabled);
   }
 
   Future<void> _onNotificationsToggled(bool enabled) async {
-    setState(() => _notifications = enabled);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('reminder_enabled', enabled);
     final notifications = ref.read(localNotificationsServiceProvider);
     if (enabled) {
+      final granted = await notifications.requestPermissions();
+      if (!granted) {
+        await prefs.setBool('reminder_enabled', false);
+        if (mounted) setState(() => _notifications = false);
+        return;
+      }
+
+      if (mounted) setState(() => _notifications = true);
+      await prefs.setBool('reminder_enabled', true);
       final time = ref.read(onboardingProvider).notificationTime;
       await prefs.setString('reminder_time', time);
       await notifications.scheduleDailyReminder(time);
     } else {
+      setState(() => _notifications = false);
+      await prefs.setBool('reminder_enabled', false);
       await notifications.cancelDailyReminder();
     }
   }
@@ -76,13 +85,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               final name = ctrl.text.trim();
               if (name.isNotEmpty) {
                 ref.read(onboardingProvider.notifier).setDisplayName(name);
-                final uid =
-                    ref.read(authServiceProvider).currentUser?.uid;
+                final uid = ref.read(authServiceProvider).currentUser?.uid;
                 if (uid != null) {
-                  ref
-                      .read(firestoreServiceProvider)
-                      .updateProfile(uid, {'displayName': name})
-                      .catchError((_) {});
+                  ref.read(firestoreServiceProvider).updateProfile(
+                      uid, {'displayName': name}).catchError((_) {});
                 }
               }
               Navigator.pop(context);
@@ -104,8 +110,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => ListView(
-        padding: const EdgeInsets.only(
-            top: AppSpacing.md, bottom: AppSpacing.xl),
+        padding:
+            const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.xl),
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(
@@ -113,32 +119,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Text('Learning language', style: AppTypography.heading3),
           ),
           ...AppConstants.supportedLanguages.map((lang) {
-            final emoji =
-                AppConstants.languageEmojis[lang] ?? '🌐';
+            final emoji = AppConstants.languageEmojis[lang] ?? '🌐';
             final isSelected = lang == current;
             return ListTile(
-              leading:
-                  Text(emoji, style: const TextStyle(fontSize: 24)),
+              leading: Text(emoji, style: const TextStyle(fontSize: 24)),
               title: Text(lang, style: AppTypography.bodyM),
               selected: isSelected,
-              selectedTileColor:
-                  AppColors.glassBorder.withValues(alpha: 0.3),
+              selectedTileColor: AppColors.glassBorder.withValues(alpha: 0.3),
               trailing: isSelected
-                  ? const Icon(Icons.check_rounded,
-                      color: AppColors.textAccent)
+                  ? const Icon(Icons.check_rounded, color: AppColors.textAccent)
                   : null,
               onTap: () {
-                ref
-                    .read(onboardingProvider.notifier)
-                    .setTargetLanguage(lang);
-                final uid =
-                    ref.read(authServiceProvider).currentUser?.uid;
+                ref.read(onboardingProvider.notifier).setTargetLanguage(lang);
+                final uid = ref.read(authServiceProvider).currentUser?.uid;
                 if (uid != null) {
-                  ref
-                      .read(firestoreServiceProvider)
-                      .updateProfile(
-                          uid, {'targetLanguage': lang})
-                      .catchError((_) {});
+                  ref.read(firestoreServiceProvider).updateProfile(
+                      uid, {'targetLanguage': lang}).catchError((_) {});
                 }
                 Navigator.pop(ctx);
               },
@@ -164,9 +160,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (time != null && mounted) {
       final formatted =
           '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-      ref
-          .read(onboardingProvider.notifier)
-          .setNotificationTime(formatted);
+      ref.read(onboardingProvider.notifier).setNotificationTime(formatted);
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('reminder_time', formatted);
       if (_notifications) {
@@ -176,10 +170,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       }
       final uid = ref.read(authServiceProvider).currentUser?.uid;
       if (uid != null) {
-        ref
-            .read(firestoreServiceProvider)
-            .updateProfile(uid, {'notificationTime': formatted})
-            .catchError((_) {});
+        ref.read(firestoreServiceProvider).updateProfile(
+            uid, {'notificationTime': formatted}).catchError((_) {});
       }
     }
   }
@@ -232,7 +224,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showPrivacyPolicy() => _showLegalSheet('Privacy Policy', '''Last updated: May 2026
+  void _showPrivacyPolicy() =>
+      _showLegalSheet('Privacy Policy', '''Last updated: May 2026
 
 1. Information We Collect
 We collect information you provide directly to us, including your display name, email address, and language learning preferences. We also collect usage data such as lessons completed, XP earned, and learning progress.
@@ -265,7 +258,8 @@ We may update this privacy policy from time to time. We will notify you of signi
 9. Contact Us
 If you have questions about this privacy policy, please contact us at privacy@verba.app''');
 
-  void _showTermsOfService() => _showLegalSheet('Terms of Service', '''Last updated: May 2026
+  void _showTermsOfService() =>
+      _showLegalSheet('Terms of Service', '''Last updated: May 2026
 
 1. Acceptance of Terms
 By using Verba, you agree to these Terms of Service. If you do not agree, please do not use the app.
@@ -358,8 +352,7 @@ For questions about these terms, contact us at legal@verba.app''');
         title: Text('Delete account?', style: AppTypography.heading3),
         content: Text(
           'This will permanently delete your profile, progress, and data. This cannot be undone.',
-          style: AppTypography.bodyM
-              .copyWith(color: AppColors.textSecondary),
+          style: AppTypography.bodyM.copyWith(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -368,8 +361,7 @@ For questions about these terms, contact us at legal@verba.app''');
           ),
           TextButton(
             onPressed: () {},
-            style:
-                TextButton.styleFrom(foregroundColor: AppColors.error),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text('Delete'),
           ),
         ],
@@ -475,8 +467,7 @@ For questions about these terms, contact us at legal@verba.app''');
                     onChanged: _onNotificationsToggled,
                   ),
                   if (_notifications) ...[
-                    const Divider(
-                        height: 1, color: AppColors.glassBorder),
+                    const Divider(height: 1, color: AppColors.glassBorder),
                     _SettingRow(
                       icon: Icons.schedule_rounded,
                       title: 'Reminder time',
@@ -502,8 +493,7 @@ For questions about these terms, contact us at legal@verba.app''');
                     icon: Icons.volume_up_rounded,
                     title: 'Sound effects',
                     value: _soundEffects,
-                    onChanged: (v) =>
-                        setState(() => _soundEffects = v),
+                    onChanged: (v) => setState(() => _soundEffects = v),
                   ),
                   const Divider(height: 1, color: AppColors.glassBorder),
                   Padding(
@@ -514,16 +504,13 @@ For questions about these terms, contact us at legal@verba.app''');
                         Row(
                           children: [
                             const Icon(Icons.speed_rounded,
-                                color: AppColors.textSecondary,
-                                size: 20),
+                                color: AppColors.textSecondary, size: 20),
                             const SizedBox(width: AppSpacing.md),
-                            Text('Speech speed',
-                                style: AppTypography.bodyM),
+                            Text('Speech speed', style: AppTypography.bodyM),
                             const Spacer(),
-                            Text(
-                                '${_speechSpeed.toStringAsFixed(1)}x',
-                                style: AppTypography.bodyS.copyWith(
-                                    color: AppColors.textSecondary)),
+                            Text('${_speechSpeed.toStringAsFixed(1)}x',
+                                style: AppTypography.bodyS
+                                    .copyWith(color: AppColors.textSecondary)),
                           ],
                         ),
                         Slider(
@@ -532,8 +519,7 @@ For questions about these terms, contact us at legal@verba.app''');
                           max: 2.0,
                           divisions: 6,
                           activeColor: AppColors.primaryStart,
-                          onChanged: (v) =>
-                              setState(() => _speechSpeed = v),
+                          onChanged: (v) => setState(() => _speechSpeed = v),
                         ),
                       ],
                     ),
@@ -610,8 +596,8 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(
-          left: AppSpacing.sm, bottom: AppSpacing.sm),
+      padding:
+          const EdgeInsets.only(left: AppSpacing.sm, bottom: AppSpacing.sm),
       child: Text(
         label.toUpperCase(),
         style: AppTypography.caption.copyWith(
@@ -638,8 +624,8 @@ class _SettingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md, vertical: 0),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 0),
       leading: Icon(icon, color: AppColors.textSecondary, size: 20),
       title: Text(title, style: AppTypography.bodyM),
       trailing: Row(

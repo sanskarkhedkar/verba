@@ -158,8 +158,9 @@ class _VoiceTranslationScreenState
           _translation = result.translatedText;
           _isProcessing = false;
         });
-        ref.read(analyticsServiceProvider).logTranslation(
-              'voice', _sourceLang, _resolvedTargetLang);
+        ref
+            .read(analyticsServiceProvider)
+            .logTranslation('voice', _sourceLang, _resolvedTargetLang);
         final uid = ref.read(authServiceProvider).currentUser?.uid;
         if (uid != null) {
           ref.read(firestoreServiceProvider).recordTranslation(uid).ignore();
@@ -179,11 +180,11 @@ class _VoiceTranslationScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            children: [
-              Row(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: Row(
                 children: [
                   IconButton(
                     onPressed: () => context.pop(),
@@ -197,111 +198,130 @@ class _VoiceTranslationScreenState
                   const SizedBox(width: 48),
                 ],
               ),
-              const SizedBox(height: AppSpacing.md),
-              LanguageSelectorRow(
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+              child: LanguageSelectorRow(
                 sourceLang: _sourceLang,
                 targetLang: _resolvedTargetLang,
                 onSourceChanged: (l) => setState(() => _sourceLang = l),
                 onTargetChanged: (l) => setState(() => _targetLang = l),
                 onSwap: _swap,
               ),
-              const SizedBox(height: AppSpacing.xl),
-              GestureDetector(
-                onTap: _toggleRecording,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: _isRecording
-                        ? const LinearGradient(
-                            colors: [AppColors.error, Color(0xFFDC2626)],
-                          )
-                        : const LinearGradient(
-                            colors: [
-                              AppColors.primaryStart,
-                              AppColors.primaryEnd,
-                            ],
-                          ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (_isRecording
-                                ? AppColors.error
-                                : AppColors.primaryStart)
-                            .withValues(alpha: 0.4),
-                        blurRadius: _isRecording ? 40 : 20,
-                        spreadRadius: _isRecording ? 8 : 0,
-                      ),
-                    ],
-                  ),
-                  child: _isProcessing
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 3))
-                      : Icon(
-                          _isRecording
-                              ? Icons.stop_rounded
-                              : Icons.mic_rounded,
-                          size: 56,
-                          color: Colors.white,
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                children: [
+                  const SizedBox(height: AppSpacing.md),
+                  Center(
+                    child: GestureDetector(
+                      onTap: _toggleRecording,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: _isRecording
+                              ? const LinearGradient(
+                                  colors: [
+                                    AppColors.error,
+                                    Color(0xFFDC2626),
+                                  ],
+                                )
+                              : const LinearGradient(
+                                  colors: [
+                                    AppColors.primaryStart,
+                                    AppColors.primaryEnd,
+                                  ],
+                                ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (_isRecording
+                                      ? AppColors.error
+                                      : AppColors.primaryStart)
+                                  .withValues(alpha: 0.4),
+                              blurRadius: _isRecording ? 40 : 20,
+                              spreadRadius: _isRecording ? 8 : 0,
+                            ),
+                          ],
                         ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                _isRecording
-                    ? 'Listening... tap to stop'
-                    : _isProcessing
-                        ? 'Translating...'
-                        : 'Tap to speak',
-                style: AppTypography.bodyM
-                    .copyWith(color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              if (_error != null)
-                GlassCard(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline_rounded,
-                          color: AppColors.error, size: 18),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Text(_error!,
-                            style: AppTypography.bodyS
-                                .copyWith(color: AppColors.error)),
+                        child: _isProcessing
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 3,
+                                ),
+                              )
+                            : Icon(
+                                _isRecording
+                                    ? Icons.stop_rounded
+                                    : Icons.mic_rounded,
+                                size: 56,
+                                color: Colors.white,
+                              ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              if (_transcript != null && _translation != null)
-                GlassCard(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(_sourceLang,
-                          style: AppTypography.caption
-                              .copyWith(color: AppColors.textSecondary)),
-                      Text(_transcript!, style: AppTypography.bodyL),
-                      const Divider(height: AppSpacing.xl),
-                      Text(_resolvedTargetLang,
-                          style: AppTypography.caption
-                              .copyWith(color: AppColors.textSecondary)),
-                      Text(_translation!, style: AppTypography.heading2),
-                      const SizedBox(height: AppSpacing.lg),
-                      VerbaButton(
-                        label: 'Practice this phrase',
-                        icon: Icons.record_voice_over_rounded,
-                        onPressed: () =>
-                            context.push(RouteConstants.lesson),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    _isRecording
+                        ? 'Listening... tap to stop'
+                        : _isProcessing
+                            ? 'Translating...'
+                            : 'Tap to speak',
+                    style: AppTypography.bodyM
+                        .copyWith(color: AppColors.textSecondary),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  if (_error != null)
+                    GlassCard(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded,
+                              color: AppColors.error, size: 18),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(_error!,
+                                style: AppTypography.bodyS
+                                    .copyWith(color: AppColors.error)),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
+                    ),
+                  if (_transcript != null && _translation != null)
+                    GlassCard(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_sourceLang,
+                              style: AppTypography.caption
+                                  .copyWith(color: AppColors.textSecondary)),
+                          Text(_transcript!, style: AppTypography.bodyL),
+                          const Divider(height: AppSpacing.xl),
+                          Text(_resolvedTargetLang,
+                              style: AppTypography.caption
+                                  .copyWith(color: AppColors.textSecondary)),
+                          Text(_translation!, style: AppTypography.heading2),
+                          const SizedBox(height: AppSpacing.lg),
+                          VerbaButton(
+                            label: 'Practice this phrase',
+                            icon: Icons.record_voice_over_rounded,
+                            onPressed: () =>
+                                context.push(RouteConstants.lesson),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

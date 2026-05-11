@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,26 +38,24 @@ void _showAllLanguagesSheet(
       maxChildSize: 0.9,
       builder: (_, scrollController) => ListView(
         controller: scrollController,
-        padding: const EdgeInsets.only(
-            top: AppSpacing.md, bottom: AppSpacing.xl),
+        padding:
+            const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.xl),
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
             child: Text('All languages', style: AppTypography.heading3),
           ),
-          ...AppConstants.supportedLanguages.map((lang) {
+          ...AppConstants.supportedLanguagesWithEnglish.map((lang) {
             final emoji = AppConstants.languageEmojis[lang] ?? '🌐';
             final isSelected = lang == currentLang;
             return ListTile(
               leading: Text(emoji, style: const TextStyle(fontSize: 24)),
               title: Text(lang, style: AppTypography.bodyM),
               selected: isSelected,
-              selectedTileColor:
-                  AppColors.glassBorder.withValues(alpha: 0.3),
+              selectedTileColor: AppColors.glassBorder.withValues(alpha: 0.3),
               trailing: isSelected
-                  ? const Icon(Icons.check_rounded,
-                      color: AppColors.textAccent)
+                  ? const Icon(Icons.check_rounded, color: AppColors.textAccent)
                   : null,
               onTap: () {
                 onSelect(lang);
@@ -92,8 +89,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   List<_OnboardingStep> get _steps => [
         _OnboardingStep(
             title: 'Start speaking today',
-            subtitle:
-                'Translation when you need it. Practice when it matters.',
+            subtitle: 'Translation when you need it. Practice when it matters.',
             kind: _StepKind.welcome),
         _OnboardingStep(
             title: 'Which language do you want to learn?',
@@ -127,8 +123,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
             kind: _StepKind.speed),
         _OnboardingStep(
             title: 'Building your plan',
-            subtitle:
-                'We are matching goals, phrases, and daily practice.',
+            subtitle: 'We are matching goals, phrases, and daily practice.',
             kind: _StepKind.plan),
         _OnboardingStep(
             title: 'In 30 days',
@@ -137,8 +132,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
             kind: _StepKind.outcome),
         _OnboardingStep(
             title: 'Learners keep coming back',
-            subtitle:
-                'Daily utility gives you a real reason to open the app.',
+            subtitle: 'Daily utility gives you a real reason to open the app.',
             kind: _StepKind.social),
         _OnboardingStep(
             title: 'Protect your streak',
@@ -150,8 +144,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
             kind: _StepKind.paywall),
         _OnboardingStep(
             title: 'Create your account',
-            subtitle:
-                'Sign in to save your progress and sync across devices.',
+            subtitle: 'Sign in to save your progress and sync across devices.',
             kind: _StepKind.auth),
         _OnboardingStep(
             title: 'What should we call you?',
@@ -211,8 +204,8 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                   child: SingleChildScrollView(
                     key: ValueKey(_index),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.lg),
+                      padding:
+                          const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -228,12 +221,11 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                           if (_index == 0)
                             GradientText('Verba',
                                 style: AppTypography.displayXL),
-                          Text(step.title,
-                              style: AppTypography.heading1),
+                          Text(step.title, style: AppTypography.heading1),
                           const SizedBox(height: AppSpacing.sm),
                           Text(step.subtitle,
-                              style: AppTypography.bodyM.copyWith(
-                                  color: AppColors.textSecondary)),
+                              style: AppTypography.bodyM
+                                  .copyWith(color: AppColors.textSecondary)),
                           const SizedBox(height: AppSpacing.xl),
                           _StepBody(
                             kind: step.kind,
@@ -254,9 +246,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                   onPressed: _isNavigating
                       ? null
                       : () {
-                          ref
-                              .read(analyticsServiceProvider)
-                              .logAuthSkipped();
+                          ref.read(analyticsServiceProvider).logAuthSkipped();
                           _next();
                         },
                 ),
@@ -325,23 +315,20 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
       }
 
       if (kind == _StepKind.language) {
-        analytics.logLanguageSelected(
-            ref.read(onboardingProvider).targetLanguage);
+        analytics
+            .logLanguageSelected(ref.read(onboardingProvider).targetLanguage);
       }
 
       // Anonymous sign-in at plan step
       if (kind == _StepKind.plan && !_anonymousSignedIn) {
         _anonymousSignedIn = true;
         try {
-          final cred =
-              await ref.read(authServiceProvider).signInAnonymously();
+          final cred = await ref.read(authServiceProvider).signInAnonymously();
           final uid = cred.user?.uid;
           if (uid != null) {
             final obState = ref.read(onboardingProvider);
             final profile = UserProfile.fromOnboarding(uid, obState);
-            await ref
-                .read(firestoreServiceProvider)
-                .createUserProfile(profile);
+            await ref.read(firestoreServiceProvider).createUserProfile(profile);
           }
         } catch (_) {}
       }
@@ -378,8 +365,9 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
           .markOnboardingComplete(uid)
           .catchError((_) {});
     }
-    ref.read(analyticsServiceProvider).logOnboardingComplete(
-        ref.read(onboardingProvider).targetLanguage);
+    ref
+        .read(analyticsServiceProvider)
+        .logOnboardingComplete(ref.read(onboardingProvider).targetLanguage);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('onboarding_done', true);
@@ -455,8 +443,12 @@ class _StepBody extends ConsumerWidget {
           children: [
             _OptionGrid(
               options: const [
-                'English', 'German', 'Spanish',
-                'French', 'Italian', 'Japanese',
+                'English',
+                'German',
+                'Spanish',
+                'French',
+                'Italian',
+                'Japanese',
               ],
               selected: state.targetLanguage,
               onTap: controller.setTargetLanguage,
@@ -478,7 +470,6 @@ class _StepBody extends ConsumerWidget {
             ),
           ],
         ),
-
       _StepKind.level => _OptionList(
           options: const [
             'A1 Beginner',
@@ -495,8 +486,13 @@ class _StepBody extends ConsumerWidget {
         ),
       _StepKind.motivation => _OptionList(
           options: const [
-            'travel', 'business', 'family', 'personal',
-            'academic', 'culture', 'moving abroad',
+            'travel',
+            'business',
+            'family',
+            'personal',
+            'academic',
+            'culture',
+            'moving abroad',
           ],
           selected: state.goalCategory,
           onTap: (value) {
@@ -513,15 +509,18 @@ class _StepBody extends ConsumerWidget {
           ],
           selected: '${state.dailyGoalMinutes}',
           onTap: (value) {
-            controller.setDailyGoalMinutes(
-                int.parse(value.split(' ').first));
+            controller.setDailyGoalMinutes(int.parse(value.split(' ').first));
             onAutoAdvance();
           },
         ),
       _StepKind.focus => _OptionGrid(
           options: const [
-            'speaking', 'vocabulary', 'pronunciation',
-            'translation', 'culture', 'confidence',
+            'speaking',
+            'vocabulary',
+            'pronunciation',
+            'translation',
+            'culture',
+            'confidence',
           ],
           selected: state.focusAreas.join(','),
           multi: true,
@@ -530,26 +529,29 @@ class _StepBody extends ConsumerWidget {
       _StepKind.graph => const _InsightCard(
           icon: Icons.trending_up_rounded,
           title: 'Confidence rises with spoken reps',
-          body: 'Verba starts with phrases you actually need, then turns them into short speaking drills.',
+          body:
+              'Verba starts with phrases you actually need, then turns them into short speaking drills.',
         ),
       _StepKind.speed => const _InsightCard(
           icon: Icons.bolt_rounded,
           title: 'Translation first, learning second',
-          body: 'Every translated phrase can become a three-minute practice moment.',
+          body:
+              'Every translated phrase can become a three-minute practice moment.',
         ),
 
       // Plan: animated checklist, auto-advances after 5 s
       _StepKind.plan => _PlanChecklist(onComplete: onAutoAdvance),
-
       _StepKind.outcome => const _InsightCard(
           icon: Icons.flag_rounded,
           title: 'Your first milestone',
-          body: 'Hold a short greeting exchange, understand common responses, and practice pronunciation daily.',
+          body:
+              'Hold a short greeting exchange, understand common responses, and practice pronunciation daily.',
         ),
       _StepKind.social => const _InsightCard(
           icon: Icons.star_rounded,
           title: '4.8 average learner rating',
-          body: 'Built for adults who want real-world language, not disconnected trivia.',
+          body:
+              'Built for adults who want real-world language, not disconnected trivia.',
         ),
 
       // Notifications: time picker + permission
@@ -557,9 +559,7 @@ class _StepBody extends ConsumerWidget {
 
       // Auth: create or sign-in
       _StepKind.auth => _AuthStep(onAuthSuccess: onAuthSuccess),
-
       _StepKind.paywall => _PaywallAutoStep(onDone: onAutoAdvance),
-
       _StepKind.name => TextField(
           controller: nameController,
           autofocus: true,
@@ -575,8 +575,7 @@ class _NotificationsStep extends ConsumerStatefulWidget {
   const _NotificationsStep();
 
   @override
-  ConsumerState<_NotificationsStep> createState() =>
-      _NotificationsStepState();
+  ConsumerState<_NotificationsStep> createState() => _NotificationsStepState();
 }
 
 class _NotificationsStepState extends ConsumerState<_NotificationsStep> {
@@ -584,14 +583,15 @@ class _NotificationsStepState extends ConsumerState<_NotificationsStep> {
   bool _permissionRequested = false;
 
   Future<void> _requestPermission() async {
-    final status = await Permission.notification.request();
+    final granted =
+        await ref.read(localNotificationsServiceProvider).requestPermissions();
     if (mounted) {
       setState(() {
         _permissionRequested = true;
-        _permissionGranted = status.isGranted;
+        _permissionGranted = granted;
       });
     }
-    if (status.isGranted) {
+    if (granted) {
       try {
         final time = ref.read(onboardingProvider).notificationTime;
         final prefs = await SharedPreferences.getInstance();
@@ -618,14 +618,12 @@ class _NotificationsStepState extends ConsumerState<_NotificationsStep> {
     if (time != null && mounted) {
       final formatted =
           '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-      ref
-          .read(onboardingProvider.notifier)
-          .setNotificationTime(formatted);
+      ref.read(onboardingProvider.notifier).setNotificationTime(formatted);
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('reminder_time', formatted);
-        await prefs.setBool('reminder_enabled', true);
         if (_permissionGranted) {
+          await prefs.setBool('reminder_enabled', true);
           await ref
               .read(localNotificationsServiceProvider)
               .scheduleDailyReminder(formatted);
@@ -679,8 +677,7 @@ class _NotificationsStepState extends ConsumerState<_NotificationsStep> {
                 const Icon(Icons.check_circle_rounded,
                     color: AppColors.success),
                 const SizedBox(width: AppSpacing.md),
-                Text('Notifications enabled',
-                    style: AppTypography.bodyM),
+                Text('Notifications enabled', style: AppTypography.bodyM),
               ],
             ),
           )
@@ -741,16 +738,14 @@ class _PaywallAutoStepState extends ConsumerState<_PaywallAutoStep> {
     if (offering != null) {
       ref.read(analyticsServiceProvider).logPaywallShown();
       try {
-        final result =
-            await RevenueCatUI.presentPaywall(offering: offering);
+        final result = await RevenueCatUI.presentPaywall(offering: offering);
         if (result == PaywallResult.purchased ||
             result == PaywallResult.restored) {
           ref.read(analyticsServiceProvider).logPaywallPurchased();
           // Sticky override drives UI immediately across all screens.
           if (mounted) ref.read(premiumOverrideProvider.notifier).state = true;
           rcService.markPremium();
-          final uid =
-              ref.read(authServiceProvider).currentUser?.uid;
+          final uid = ref.read(authServiceProvider).currentUser?.uid;
           if (uid != null) {
             ref
                 .read(firestoreServiceProvider)
@@ -805,11 +800,10 @@ class _AuthStepState extends ConsumerState<_AuthStep> {
       _error = null;
     });
     try {
-      final cred =
-          await ref.read(authServiceProvider).signInWithGoogle();
+      final cred = await ref.read(authServiceProvider).signInWithGoogle();
       final isNew = cred.additionalUserInfo?.isNewUser ?? true;
-      final uid = cred.user?.uid ??
-          ref.read(authServiceProvider).currentUser?.uid;
+      final uid =
+          cred.user?.uid ?? ref.read(authServiceProvider).currentUser?.uid;
       if (uid != null && mounted) await widget.onAuthSuccess(uid, isNew);
     } catch (e) {
       if (mounted) setState(() => _error = _friendlyError(e.toString()));
@@ -832,8 +826,8 @@ class _AuthStepState extends ConsumerState<_AuthStep> {
               .read(authServiceProvider)
               .createWithEmail(_emailCtrl.text, _passCtrl.text);
       final isNew = !_signInMode;
-      final uid = cred.user?.uid ??
-          ref.read(authServiceProvider).currentUser?.uid;
+      final uid =
+          cred.user?.uid ?? ref.read(authServiceProvider).currentUser?.uid;
       if (uid != null && mounted) await widget.onAuthSuccess(uid, isNew);
     } catch (e) {
       if (mounted) setState(() => _error = _friendlyError(e.toString()));
@@ -859,8 +853,7 @@ class _AuthStepState extends ConsumerState<_AuthStep> {
     if (raw.contains('network')) {
       return 'Network error. Check your connection and try again.';
     }
-    if (raw.contains('ApiException: 10') ||
-        raw.contains('DEVELOPER_ERROR')) {
+    if (raw.contains('ApiException: 10') || raw.contains('DEVELOPER_ERROR')) {
       return 'Google Sign-In configuration error. Please use email sign-in.';
     }
     return 'Sign-in failed: $raw';
@@ -908,8 +901,8 @@ class _AuthStepState extends ConsumerState<_AuthStep> {
             if (_error != null) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(_error!,
-                  style: AppTypography.caption
-                      .copyWith(color: AppColors.error)),
+                  style:
+                      AppTypography.caption.copyWith(color: AppColors.error)),
             ],
             const SizedBox(height: AppSpacing.lg),
             VerbaButton(
@@ -934,8 +927,7 @@ class _AuthStepState extends ConsumerState<_AuthStep> {
           GlassCard(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Text(_error!,
-                style:
-                    AppTypography.bodyS.copyWith(color: AppColors.error)),
+                style: AppTypography.bodyS.copyWith(color: AppColors.error)),
           ),
           const SizedBox(height: AppSpacing.md),
         ],
@@ -963,8 +955,7 @@ class _AuthStepState extends ConsumerState<_AuthStep> {
             }),
             child: Text(
               'Already have an account? Sign in',
-              style: AppTypography.bodyS
-                  .copyWith(color: AppColors.textAccent),
+              style: AppTypography.bodyS.copyWith(color: AppColors.textAccent),
             ),
           ),
         ),
@@ -1019,8 +1010,7 @@ class _PlanChecklistState extends State<_PlanChecklist>
       animation: _ctrl,
       builder: (context, _) {
         final progress = _ctrl.value;
-        final visibleCount =
-            _thresholds.where((t) => progress >= t).length;
+        final visibleCount = _thresholds.where((t) => progress >= t).length;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1060,8 +1050,8 @@ class _PlanChecklistState extends State<_PlanChecklist>
                       opacity: i < visibleCount ? 1.0 : 0.15,
                       duration: const Duration(milliseconds: 400),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.sm),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: AppSpacing.sm),
                         child: Row(
                           children: [
                             Icon(
@@ -1074,8 +1064,8 @@ class _PlanChecklistState extends State<_PlanChecklist>
                             ),
                             const SizedBox(width: AppSpacing.md),
                             Expanded(
-                              child: Text(_items[i],
-                                  style: AppTypography.bodyM),
+                              child:
+                                  Text(_items[i], style: AppTypography.bodyM),
                             ),
                           ],
                         ),
@@ -1119,23 +1109,17 @@ class _OptionGrid extends StatelessWidget {
       ),
       itemBuilder: (context, index) {
         final option = options[index];
-        final active =
-            multi ? selected.contains(option) : selected == option;
+        final active = multi ? selected.contains(option) : selected == option;
         return GlassCard(
           onTap: () => onTap(option),
           child: Row(
             children: [
               Icon(
-                active
-                    ? Icons.check_circle_rounded
-                    : Icons.language_rounded,
-                color: active
-                    ? AppColors.textAccent
-                    : AppColors.textSecondary,
+                active ? Icons.check_circle_rounded : Icons.language_rounded,
+                color: active ? AppColors.textAccent : AppColors.textSecondary,
               ),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                  child: Text(option, style: AppTypography.bodyM)),
+              Expanded(child: Text(option, style: AppTypography.bodyM)),
             ],
           ),
         );
@@ -1169,13 +1153,10 @@ class _OptionList extends StatelessWidget {
                 active
                     ? Icons.check_circle_rounded
                     : Icons.radio_button_unchecked,
-                color: active
-                    ? AppColors.textAccent
-                    : AppColors.textSecondary,
+                color: active ? AppColors.textAccent : AppColors.textSecondary,
               ),
               const SizedBox(width: AppSpacing.md),
-              Expanded(
-                  child: Text(option, style: AppTypography.bodyM)),
+              Expanded(child: Text(option, style: AppTypography.bodyM)),
             ],
           ),
         );
@@ -1207,8 +1188,8 @@ class _InsightCard extends StatelessWidget {
           Text(title, style: AppTypography.heading3),
           const SizedBox(height: AppSpacing.sm),
           Text(body,
-              style: AppTypography.bodyM
-                  .copyWith(color: AppColors.textSecondary)),
+              style:
+                  AppTypography.bodyM.copyWith(color: AppColors.textSecondary)),
         ],
       ),
     );
