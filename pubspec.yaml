@@ -62,7 +62,7 @@ dependencies:
   flutter_dotenv: ^5.2.1
 
   # Google Fonts (replaces local font assets for now)
-  google_fonts: ^8.1.0
+  google_fonts: ^6.3.0
 
 dev_dependencies:
   flutter_test:
