@@ -189,7 +189,7 @@ class _LearnTab extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.lg),
-        Text('Good evening, $name', style: AppTypography.heading1),
+        Text('${Helpers.greeting()}, $name', style: AppTypography.heading1),
         const SizedBox(height: AppSpacing.sm),
         Text(
           'Your ${onboarding.targetLanguage} speaking plan is ready.',

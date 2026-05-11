@@ -13,12 +13,19 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/language_detector.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/verba_button.dart';
+import '../../onboarding/providers/onboarding_provider.dart';
 import '../widgets/language_selector.dart';
 
 final _textTranslationProvider =
     StateNotifierProvider.autoDispose<_TextTranslationController,
         _TextTranslationState>((ref) {
-  return _TextTranslationController(ref);
+  final learning = ref.read(onboardingProvider).targetLanguage;
+  final initialTarget =
+      learning.isEmpty || learning == 'English' ? 'German' : learning;
+  return _TextTranslationController(
+    ref,
+    initial: _TextTranslationState(targetLang: initialTarget),
+  );
 });
 
 class _TextTranslationState {
@@ -55,7 +62,9 @@ class _TextTranslationState {
 
 class _TextTranslationController
     extends StateNotifier<_TextTranslationState> {
-  _TextTranslationController(this.ref) : super(const _TextTranslationState());
+  _TextTranslationController(this.ref,
+      {_TextTranslationState initial = const _TextTranslationState()})
+      : super(initial);
   final Ref ref;
 
   void setSourceLang(String lang) =>
@@ -63,6 +72,9 @@ class _TextTranslationController
 
   void setTargetLang(String lang) =>
       state = state.copyWith(targetLang: lang, clearResult: true);
+
+  void clearResult() =>
+      state = state.copyWith(clearResult: true, clearError: true);
 
   void swap() => state = state.copyWith(
         sourceLang: state.targetLang,
@@ -106,7 +118,20 @@ class _TextTranslationScreenState
   final _controller = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onInputChanged);
+  }
+
+  void _onInputChanged() {
+    if (_controller.text.trim().isEmpty) {
+      ref.read(_textTranslationProvider.notifier).clearResult();
+    }
+  }
+
+  @override
   void dispose() {
+    _controller.removeListener(_onInputChanged);
     _controller.dispose();
     super.dispose();
   }
@@ -263,6 +288,7 @@ class _TextTranslationScreenState
                                 _showLanguageMismatchDialog(state.sourceLang);
                                 return;
                               }
+                              FocusScope.of(context).unfocus();
                               controller.translate(_controller.text);
                             },
                             child: const Text('Translate →'),

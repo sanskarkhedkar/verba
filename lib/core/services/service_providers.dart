@@ -7,6 +7,7 @@ import 'elevenlabs_service.dart';
 import 'fcm_service.dart';
 import 'firestore_service.dart';
 import 'gemini_service.dart';
+import 'local_notifications_service.dart';
 import 'mlkit_ocr_service.dart';
 import 'revenuecat_service.dart';
 import 'stt_service.dart';
@@ -45,6 +46,11 @@ final firestoreServiceProvider = Provider<FirestoreService>((ref) {
 
 final fcmServiceProvider = Provider<FcmService>((ref) {
   return const FcmService();
+});
+
+final localNotificationsServiceProvider =
+    Provider<LocalNotificationsService>((ref) {
+  return LocalNotificationsService();
 });
 
 final revenueCatServiceProvider = ChangeNotifierProvider<RevenueCatService>((ref) {

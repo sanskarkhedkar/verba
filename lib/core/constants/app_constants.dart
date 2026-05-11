@@ -27,6 +27,7 @@ abstract final class AppConstants {
 
   // Supported languages
   static const supportedLanguages = [
+    'English',
     'German',
     'Spanish',
     'French',

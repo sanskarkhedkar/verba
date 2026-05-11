@@ -10,6 +10,7 @@ import 'app.dart';
 import 'core/constants/route_constants.dart';
 import 'core/services/fcm_service.dart';
 import 'core/services/firebase_bootstrap_service.dart';
+import 'core/services/local_notifications_service.dart';
 import 'core/services/revenuecat_service.dart';
 import 'firebase_options.dart';
 
@@ -47,6 +48,18 @@ Future<void> main() async {
   final onboardingDone = prefs.getBool('onboarding_done') ?? false;
   final initialRoute =
       onboardingDone ? RouteConstants.home : RouteConstants.onboarding;
+
+  // Initialize local notifications and reschedule any saved daily reminder.
+  try {
+    final notifications = LocalNotificationsService();
+    await notifications.initialize();
+    final savedTime = prefs.getString('reminder_time');
+    if (savedTime != null && savedTime.isNotEmpty) {
+      await notifications.scheduleDailyReminder(savedTime);
+    }
+  } on Object {
+    // Notifications are non-blocking — continue if scheduling fails.
+  }
 
   runApp(ProviderScope(child: VerbaApp(initialRoute: initialRoute)));
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/route_constants.dart';
@@ -24,6 +25,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _notifications = true;
   bool _soundEffects = true;
   double _speechSpeed = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationsPref();
+  }
+
+  Future<void> _loadNotificationsPref() async {
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool('reminder_enabled') ?? true;
+    if (mounted) setState(() => _notifications = enabled);
+  }
+
+  Future<void> _onNotificationsToggled(bool enabled) async {
+    setState(() => _notifications = enabled);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('reminder_enabled', enabled);
+    final notifications = ref.read(localNotificationsServiceProvider);
+    if (enabled) {
+      final time = ref.read(onboardingProvider).notificationTime;
+      await prefs.setString('reminder_time', time);
+      await notifications.scheduleDailyReminder(time);
+    } else {
+      await notifications.cancelDailyReminder();
+    }
+  }
 
   // ── Display name ────────────────────────────────────────────────────────────
   void _editDisplayName() {
@@ -140,6 +167,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ref
           .read(onboardingProvider.notifier)
           .setNotificationTime(formatted);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('reminder_time', formatted);
+      if (_notifications) {
+        await ref
+            .read(localNotificationsServiceProvider)
+            .scheduleDailyReminder(formatted);
+      }
       final uid = ref.read(authServiceProvider).currentUser?.uid;
       if (uid != null) {
         ref
@@ -438,8 +472,7 @@ For questions about these terms, contact us at legal@verba.app''');
                     icon: Icons.notifications_rounded,
                     title: 'Daily reminders',
                     value: _notifications,
-                    onChanged: (v) =>
-                        setState(() => _notifications = v),
+                    onChanged: _onNotificationsToggled,
                   ),
                   if (_notifications) ...[
                     const Divider(
@@ -641,7 +674,7 @@ class _SwitchRow extends StatelessWidget {
       secondary: Icon(icon, color: AppColors.textSecondary, size: 20),
       title: Text(title, style: AppTypography.bodyM),
       value: value,
-      activeColor: AppColors.primaryStart,
+      activeTrackColor: AppColors.primaryStart,
       onChanged: onChanged,
     );
   }

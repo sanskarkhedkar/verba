@@ -15,7 +15,8 @@
       "Bash(dart run *)",
       "Bash(flutter --version)",
       "Bash(git *)",
-      "Bash(grep -E \"^\\(web|windows|linux|macos\\)$\")"
+      "Bash(grep -E \"^\\(web|windows|linux|macos\\)$\")",
+      "Bash(findstr /i \"google_fonts\")"
     ]
   }
 }

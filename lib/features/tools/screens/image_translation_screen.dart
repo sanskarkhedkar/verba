@@ -12,6 +12,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/verba_button.dart';
+import '../../onboarding/providers/onboarding_provider.dart';
 import '../widgets/language_selector.dart';
 
 class ImageTranslationScreen extends ConsumerStatefulWidget {
@@ -25,7 +26,7 @@ class ImageTranslationScreen extends ConsumerStatefulWidget {
 class _ImageTranslationScreenState
     extends ConsumerState<ImageTranslationScreen> {
   String _sourceLang = 'English';
-  String _targetLang = 'German';
+  String? _targetLang;
   File? _imageFile;
   bool _isProcessing = false;
   String? _ocrText;
@@ -33,6 +34,12 @@ class _ImageTranslationScreenState
   String? _error;
 
   final ImagePicker _picker = ImagePicker();
+
+  String get _resolvedTargetLang {
+    if (_targetLang != null) return _targetLang!;
+    final learning = ref.read(onboardingProvider).targetLanguage;
+    return learning.isEmpty || learning == _sourceLang ? 'German' : learning;
+  }
 
   @override
   void initState() {
@@ -107,7 +114,7 @@ class _ImageTranslationScreenState
           await ref.read(translationServiceProvider).translateText(
                 ocrText.trim(),
                 sourceLang: _sourceLang,
-                targetLang: _targetLang,
+                targetLang: _resolvedTargetLang,
               );
 
       if (mounted) {
@@ -117,7 +124,7 @@ class _ImageTranslationScreenState
           _isProcessing = false;
         });
         ref.read(analyticsServiceProvider).logTranslation(
-              'image', _sourceLang, _targetLang);
+              'image', _sourceLang, _resolvedTargetLang);
         final uid = ref.read(authServiceProvider).currentUser?.uid;
         if (uid != null) {
           ref.read(firestoreServiceProvider).recordTranslation(uid).ignore();
@@ -170,14 +177,14 @@ class _ImageTranslationScreenState
                   horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
               child: LanguageSelectorRow(
                 sourceLang: _sourceLang,
-                targetLang: _targetLang,
+                targetLang: _resolvedTargetLang,
                 onSourceChanged: (l) =>
                     setState(() => _sourceLang = l),
                 onTargetChanged: (l) =>
                     setState(() => _targetLang = l),
                 onSwap: () => setState(() {
                   final tmp = _sourceLang;
-                  _sourceLang = _targetLang;
+                  _sourceLang = _resolvedTargetLang;
                   _targetLang = tmp;
                 }),
               ),
@@ -191,7 +198,7 @@ class _ImageTranslationScreenState
                       ocrText: _ocrText,
                       translation: _translation,
                       error: _error,
-                      targetLang: _targetLang,
+                      targetLang: _resolvedTargetLang,
                       onReset: _reset,
                     ),
             ),

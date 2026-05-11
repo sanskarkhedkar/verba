@@ -14,6 +14,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/verba_button.dart';
+import '../../onboarding/providers/onboarding_provider.dart';
 import '../widgets/language_selector.dart';
 
 class VoiceTranslationScreen extends ConsumerStatefulWidget {
@@ -27,7 +28,7 @@ class VoiceTranslationScreen extends ConsumerStatefulWidget {
 class _VoiceTranslationScreenState
     extends ConsumerState<VoiceTranslationScreen> {
   String _sourceLang = 'English';
-  String _targetLang = 'German';
+  String? _targetLang;
   bool _isRecording = false;
   bool _isProcessing = false;
   String? _transcript;
@@ -35,6 +36,12 @@ class _VoiceTranslationScreenState
   String? _error;
 
   final AudioRecorder _recorder = AudioRecorder();
+
+  String get _resolvedTargetLang {
+    if (_targetLang != null) return _targetLang!;
+    final learning = ref.read(onboardingProvider).targetLanguage;
+    return learning.isEmpty || learning == _sourceLang ? 'German' : learning;
+  }
 
   @override
   void dispose() {
@@ -44,7 +51,7 @@ class _VoiceTranslationScreenState
 
   void _swap() => setState(() {
         final tmp = _sourceLang;
-        _sourceLang = _targetLang;
+        _sourceLang = _resolvedTargetLang;
         _targetLang = tmp;
         _transcript = null;
         _translation = null;
@@ -56,8 +63,32 @@ class _VoiceTranslationScreenState
     if (_isRecording) {
       await _stopAndProcess();
     } else {
+      if (_sourceLang == _resolvedTargetLang) {
+        _showSameLangDialog();
+        return;
+      }
       await _startRecording();
     }
+  }
+
+  void _showSameLangDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.bgSurface,
+        title: Text('Same language selected', style: AppTypography.heading3),
+        content: Text(
+          'Source and target languages are the same. Please choose a different language for either the source or the target.',
+          style: AppTypography.bodyM.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _startRecording() async {
@@ -118,7 +149,7 @@ class _VoiceTranslationScreenState
       final result = await ref.read(translationServiceProvider).translateText(
             transcript.trim(),
             sourceLang: _sourceLang,
-            targetLang: _targetLang,
+            targetLang: _resolvedTargetLang,
           );
 
       if (mounted) {
@@ -128,7 +159,7 @@ class _VoiceTranslationScreenState
           _isProcessing = false;
         });
         ref.read(analyticsServiceProvider).logTranslation(
-              'voice', _sourceLang, _targetLang);
+              'voice', _sourceLang, _resolvedTargetLang);
         final uid = ref.read(authServiceProvider).currentUser?.uid;
         if (uid != null) {
           ref.read(firestoreServiceProvider).recordTranslation(uid).ignore();
@@ -169,7 +200,7 @@ class _VoiceTranslationScreenState
               const SizedBox(height: AppSpacing.md),
               LanguageSelectorRow(
                 sourceLang: _sourceLang,
-                targetLang: _targetLang,
+                targetLang: _resolvedTargetLang,
                 onSourceChanged: (l) => setState(() => _sourceLang = l),
                 onTargetChanged: (l) => setState(() => _targetLang = l),
                 onSwap: _swap,
@@ -255,7 +286,7 @@ class _VoiceTranslationScreenState
                               .copyWith(color: AppColors.textSecondary)),
                       Text(_transcript!, style: AppTypography.bodyL),
                       const Divider(height: AppSpacing.xl),
-                      Text(_targetLang,
+                      Text(_resolvedTargetLang,
                           style: AppTypography.caption
                               .copyWith(color: AppColors.textSecondary)),
                       Text(_translation!, style: AppTypography.heading2),

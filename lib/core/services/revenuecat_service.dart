@@ -72,7 +72,7 @@ class RevenueCatService extends ChangeNotifier {
   }
 
   bool _hasPremiumEntitlement(CustomerInfo info) {
-    return info.entitlements.active.containsKey('pro');
+    return _premiumEntitlementIds.any((id) => info.entitlements.active.containsKey(id));
   }
 
   Future<void> setUserId(String uid) async {

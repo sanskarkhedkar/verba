@@ -455,8 +455,8 @@ class _StepBody extends ConsumerWidget {
           children: [
             _OptionGrid(
               options: const [
-                'German', 'Spanish', 'French',
-                'Italian', 'Japanese', 'Korean',
+                'English', 'German', 'Spanish',
+                'French', 'Italian', 'Japanese',
               ],
               selected: state.targetLanguage,
               onTap: controller.setTargetLanguage,
@@ -591,6 +591,17 @@ class _NotificationsStepState extends ConsumerState<_NotificationsStep> {
         _permissionGranted = status.isGranted;
       });
     }
+    if (status.isGranted) {
+      try {
+        final time = ref.read(onboardingProvider).notificationTime;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('reminder_time', time);
+        await prefs.setBool('reminder_enabled', true);
+        await ref
+            .read(localNotificationsServiceProvider)
+            .scheduleDailyReminder(time);
+      } on Object {/* non-blocking */}
+    }
   }
 
   Future<void> _pickTime() async {
@@ -610,6 +621,16 @@ class _NotificationsStepState extends ConsumerState<_NotificationsStep> {
       ref
           .read(onboardingProvider.notifier)
           .setNotificationTime(formatted);
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('reminder_time', formatted);
+        await prefs.setBool('reminder_enabled', true);
+        if (_permissionGranted) {
+          await ref
+              .read(localNotificationsServiceProvider)
+              .scheduleDailyReminder(formatted);
+        }
+      } on Object {/* non-blocking */}
     }
   }
 

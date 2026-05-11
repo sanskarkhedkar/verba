@@ -32,7 +32,7 @@ abstract final class ApiConstants {
     'Spanish': 'ErXwobaYiN019PkySvjV',
     'French': 'MF3mGyEYCl7XYWbV9V6O',
     'Italian': 'AZnzlk1XvdvUeBnXmlld',
-    'Japanese': 'jBpfuIE2acCJs8JXaw8Y',
+    'Japanese': '21m00Tcm4TlvDq8ikWAM',
     'Korean': 'XB0fDUnXU5powFXDhCwa',
     'Portuguese': 'onwK4e9ZLuTAKqWW03F9',
     'Mandarin': 'XB0fDUnXU5powFXDhCwa',

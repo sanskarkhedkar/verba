@@ -31,22 +31,31 @@ class ElevenLabsService {
   Future<void> _play(String text, String language, {required double speed}) async {
     if (text.isEmpty || ApiConstants.elevenLabsApiKey.isEmpty) return;
 
-    try {
-      final voiceId = _voiceId(language);
-      final key = _cacheKey(text, voiceId, speed);
+    final voiceId = _voiceId(language);
+    final fallbackVoiceId = ApiConstants.voiceIds['English'] ??
+        'EXAVITQu4vr4xnSDxMaL';
 
+    if (await _tryPlay(text, voiceId, speed)) return;
+    if (voiceId != fallbackVoiceId) {
+      await _tryPlay(text, fallbackVoiceId, speed);
+    }
+  }
+
+  Future<bool> _tryPlay(String text, String voiceId, double speed) async {
+    try {
+      final key = _cacheKey(text, voiceId, speed);
       String filePath;
       if (_cache.containsKey(key)) {
         filePath = _cache[key]!;
       } else {
         filePath = await _fetchAndCache(text, voiceId, speed, key);
       }
-
       await _player.stop();
       await _player.setFilePath(filePath);
       await _player.play();
+      return true;
     } catch (_) {
-      // Fail silently — audio is enhancement, not blocking
+      return false;
     }
   }
 

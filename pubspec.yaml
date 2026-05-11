@@ -24,6 +24,10 @@ dependencies:
   firebase_remote_config: ^6.4.0
   firebase_storage: ^13.3.0
 
+  # Local notifications (daily reminders)
+  flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.4
+
   # AI / APIs
   http: ^1.2.2
 
@@ -58,7 +62,7 @@ dependencies:
   flutter_dotenv: ^5.2.1
 
   # Google Fonts (replaces local font assets for now)
-  google_fonts: ^6.3.0
+  google_fonts: ^8.1.0
 
 dev_dependencies:
   flutter_test:
