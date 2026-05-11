@@ -55,7 +55,9 @@ class _VerbaAppState extends ConsumerState<VerbaApp> {
         // ── Onboarding ────────────────────────────────────────────────────────
         GoRoute(
           path: RouteConstants.onboarding,
-          builder: (context, state) => const OnboardingFlowScreen(),
+          builder: (context, state) => OnboardingFlowScreen(
+            initialStepName: state.uri.queryParameters['step'],
+          ),
         ),
 
         // ── Main shell ────────────────────────────────────────────────────────
@@ -135,10 +137,8 @@ class _VerbaAppState extends ConsumerState<VerbaApp> {
   /// Listen for the first real (non-anonymous) auth state, then sync RC → Firestore.
   /// Uses the auth stream directly so it fires after Firebase resolves, not before.
   void _schedulePremiumSync() {
-    _premiumSyncSub = ref
-        .read(authServiceProvider)
-        .authStateChanges
-        .listen((user) async {
+    _premiumSyncSub =
+        ref.read(authServiceProvider).authStateChanges.listen((user) async {
       if (user == null || user.isAnonymous) return;
       // One-shot: cancel once we have a real user
       await _premiumSyncSub?.cancel();
@@ -179,8 +179,7 @@ class _VerbaAppState extends ConsumerState<VerbaApp> {
       );
 
       // Foreground → in-app banner
-      _foregroundSub =
-          FirebaseMessaging.onMessage.listen(_onForegroundMessage);
+      _foregroundSub = FirebaseMessaging.onMessage.listen(_onForegroundMessage);
 
       // Background tap → navigate
       _tapSub = FirebaseMessaging.onMessageOpenedApp.listen(_onNotificationTap);
@@ -243,8 +242,7 @@ class _VerbaAppState extends ConsumerState<VerbaApp> {
         backgroundColor: AppColors.bgElevated,
         duration: const Duration(seconds: 5),
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(AppSpacing.md),
       ),
     );

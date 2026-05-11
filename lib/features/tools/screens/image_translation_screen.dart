@@ -67,6 +67,11 @@ class _ImageTranslationScreenState
   }
 
   Future<void> _pickImage({required bool fromCamera}) async {
+    if (_sourceLang == _resolvedTargetLang) {
+      _showSameLangDialog();
+      return;
+    }
+
     try {
       final source = fromCamera ? ImageSource.camera : ImageSource.gallery;
       final picked = await _picker.pickImage(
@@ -95,10 +100,29 @@ class _ImageTranslationScreenState
     }
   }
 
+  void _showSameLangDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.bgSurface,
+        title: Text('Same language selected', style: AppTypography.heading3),
+        content: Text(
+          'Source and target languages are the same. Please choose a different language for either the source or the target.',
+          style: AppTypography.bodyM.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _processPath(String path) async {
     try {
-      final ocrText =
-          await ref.read(mlkitOcrServiceProvider).extractText(path);
+      final ocrText = await ref.read(mlkitOcrServiceProvider).extractText(path);
 
       if (ocrText.trim().isEmpty) {
         if (mounted) {
@@ -110,12 +134,11 @@ class _ImageTranslationScreenState
         return;
       }
 
-      final result =
-          await ref.read(translationServiceProvider).translateText(
-                ocrText.trim(),
-                sourceLang: _sourceLang,
-                targetLang: _resolvedTargetLang,
-              );
+      final result = await ref.read(translationServiceProvider).translateText(
+            ocrText.trim(),
+            sourceLang: _sourceLang,
+            targetLang: _resolvedTargetLang,
+          );
 
       if (mounted) {
         setState(() {
@@ -123,8 +146,9 @@ class _ImageTranslationScreenState
           _translation = result.translatedText;
           _isProcessing = false;
         });
-        ref.read(analyticsServiceProvider).logTranslation(
-              'image', _sourceLang, _resolvedTargetLang);
+        ref
+            .read(analyticsServiceProvider)
+            .logTranslation('image', _sourceLang, _resolvedTargetLang);
         final uid = ref.read(authServiceProvider).currentUser?.uid;
         if (uid != null) {
           ref.read(firestoreServiceProvider).recordTranslation(uid).ignore();
@@ -155,8 +179,7 @@ class _ImageTranslationScreenState
         child: Column(
           children: [
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
               child: Row(
                 children: [
                   IconButton(
@@ -178,10 +201,8 @@ class _ImageTranslationScreenState
               child: LanguageSelectorRow(
                 sourceLang: _sourceLang,
                 targetLang: _resolvedTargetLang,
-                onSourceChanged: (l) =>
-                    setState(() => _sourceLang = l),
-                onTargetChanged: (l) =>
-                    setState(() => _targetLang = l),
+                onSourceChanged: (l) => setState(() => _sourceLang = l),
+                onTargetChanged: (l) => setState(() => _targetLang = l),
                 onSwap: () => setState(() {
                   final tmp = _sourceLang;
                   _sourceLang = _resolvedTargetLang;
@@ -233,13 +254,11 @@ class _EmptyPrompt extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xl),
           Text('Point your camera at any text',
-              style: AppTypography.heading2,
-              textAlign: TextAlign.center),
+              style: AppTypography.heading2, textAlign: TextAlign.center),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Menus, signs, labels — Verba reads and translates instantly.',
-            style: AppTypography.bodyM
-                .copyWith(color: AppColors.textSecondary),
+            style: AppTypography.bodyM.copyWith(color: AppColors.textSecondary),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.xl),
@@ -309,8 +328,7 @@ class _ImageView extends StatelessWidget {
           GlassCard(
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: Text(error!,
-                style: AppTypography.bodyM
-                    .copyWith(color: AppColors.error)),
+                style: AppTypography.bodyM.copyWith(color: AppColors.error)),
           )
         else if (ocrText != null && translation != null) ...[
           GlassCard(

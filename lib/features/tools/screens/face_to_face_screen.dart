@@ -91,6 +91,26 @@ class _FaceToFaceScreenState extends ConsumerState<FaceToFaceScreen> {
     );
   }
 
+  void _showLanguageMismatchDialog(String sourceLang) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.bgSurface,
+        title: Text('Language mismatch', style: AppTypography.heading3),
+        content: Text(
+          'The speech does not match the selected side language. Please speak in $sourceLang.',
+          style: AppTypography.bodyM.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showLangPicker({required bool forA}) {
     final current = forA ? _langA : _resolvedLangB;
     showModalBottomSheet<void>(
@@ -110,13 +130,11 @@ class _FaceToFaceScreenState extends ConsumerState<FaceToFaceScreen> {
               leading: Text(emoji, style: const TextStyle(fontSize: 24)),
               title: Text(lang,
                   style: AppTypography.bodyM.copyWith(
-                    color: selected
-                        ? AppColors.textAccent
-                        : AppColors.textPrimary,
+                    color:
+                        selected ? AppColors.textAccent : AppColors.textPrimary,
                   )),
               trailing: selected
-                  ? const Icon(Icons.check_rounded,
-                      color: AppColors.textAccent)
+                  ? const Icon(Icons.check_rounded, color: AppColors.textAccent)
                   : null,
               onTap: () {
                 setState(() {
@@ -205,23 +223,38 @@ class _FaceToFaceScreenState extends ConsumerState<FaceToFaceScreen> {
         return;
       }
 
-      final result = await ref.read(translationServiceProvider).translateText(
-            transcript.trim(),
-            sourceLang: srcLang,
-            targetLang: tgtLang,
-          );
+      final trimmedTranscript = transcript.trim();
+      final translationService = ref.read(translationServiceProvider);
+      final matchesLanguage = await translationService.matchesInputLanguage(
+        trimmedTranscript,
+        srcLang,
+      );
+      if (!matchesLanguage) {
+        if (mounted) {
+          setState(() => _isProcessing = false);
+          _showLanguageMismatchDialog(srcLang);
+        }
+        return;
+      }
+
+      final result = await translationService.translateText(
+        trimmedTranscript,
+        sourceLang: srcLang,
+        targetLang: tgtLang,
+      );
 
       if (mounted) {
         setState(() {
           _turns.add(_Turn(
             speaker: speaker,
-            original: transcript.trim(),
+            original: trimmedTranscript,
             translated: result.translatedText,
           ));
           _isProcessing = false;
         });
-        ref.read(analyticsServiceProvider).logTranslation(
-              'face_to_face', srcLang, tgtLang);
+        ref
+            .read(analyticsServiceProvider)
+            .logTranslation('face_to_face', srcLang, tgtLang);
         final uid = ref.read(authServiceProvider).currentUser?.uid;
         if (uid != null) {
           ref.read(firestoreServiceProvider).recordTranslation(uid).ignore();
@@ -337,8 +370,7 @@ class _FaceToFaceScreenState extends ConsumerState<FaceToFaceScreen> {
               child: _SpeakerPanel(
                 label: _langA,
                 isRecording: _activeRecordingSpeaker == 'A',
-                isProcessing:
-                    _isProcessing && _activeRecordingSpeaker == null,
+                isProcessing: _isProcessing && _activeRecordingSpeaker == null,
                 displayText: textForA,
                 accentColor: AppColors.primaryStart,
                 onTap: () => _handleTap('A'),
@@ -363,8 +395,7 @@ class _LangChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
       onTap: onTap,
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
           color: AppColors.bgSurface,
           borderRadius: BorderRadius.circular(20),
@@ -462,9 +493,7 @@ class _SpeakerPanel extends StatelessWidget {
             ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            isRecording
-                ? 'Tap to stop'
-                : 'Tap to speak in $label',
+            isRecording ? 'Tap to stop' : 'Tap to speak in $label',
             style:
                 AppTypography.caption.copyWith(color: AppColors.textSecondary),
           ),

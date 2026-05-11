@@ -10,15 +10,13 @@ import '../../../core/services/translation_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
-import '../../../core/utils/language_detector.dart';
 import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/verba_button.dart';
 import '../../onboarding/providers/onboarding_provider.dart';
 import '../widgets/language_selector.dart';
 
-final _textTranslationProvider =
-    StateNotifierProvider.autoDispose<_TextTranslationController,
-        _TextTranslationState>((ref) {
+final _textTranslationProvider = StateNotifierProvider.autoDispose<
+    _TextTranslationController, _TextTranslationState>((ref) {
   final learning = ref.read(onboardingProvider).targetLanguage;
   final initialTarget =
       learning.isEmpty || learning == 'English' ? 'German' : learning;
@@ -60,8 +58,7 @@ class _TextTranslationState {
       );
 }
 
-class _TextTranslationController
-    extends StateNotifier<_TextTranslationState> {
+class _TextTranslationController extends StateNotifier<_TextTranslationState> {
   _TextTranslationController(this.ref,
       {_TextTranslationState initial = const _TextTranslationState()})
       : super(initial);
@@ -92,8 +89,9 @@ class _TextTranslationController
             targetLang: state.targetLang,
           );
       state = state.copyWith(result: result, isLoading: false);
-      ref.read(analyticsServiceProvider).logTranslation(
-            'text', state.sourceLang, state.targetLang);
+      ref
+          .read(analyticsServiceProvider)
+          .logTranslation('text', state.sourceLang, state.targetLang);
       final uid = ref.read(authServiceProvider).currentUser?.uid;
       if (uid != null) {
         ref.read(firestoreServiceProvider).recordTranslation(uid).ignore();
@@ -113,8 +111,7 @@ class TextTranslationScreen extends ConsumerStatefulWidget {
       _TextTranslationScreenState();
 }
 
-class _TextTranslationScreenState
-    extends ConsumerState<TextTranslationScreen> {
+class _TextTranslationScreenState extends ConsumerState<TextTranslationScreen> {
   final _controller = TextEditingController();
 
   @override
@@ -194,7 +191,7 @@ class _TextTranslationScreenState
         backgroundColor: AppColors.bgSurface,
         title: Text('Language mismatch', style: AppTypography.heading3),
         content: Text(
-          "Input text and language doesn't match. The text you entered doesn't appear to be in $sourceLang.",
+          'The text does not match the selected input language. Please type in $sourceLang.',
           style: AppTypography.bodyM.copyWith(color: AppColors.textSecondary),
         ),
         actions: [
@@ -218,8 +215,7 @@ class _TextTranslationScreenState
           children: [
             // Header
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
               child: Row(
                 children: [
                   IconButton(
@@ -276,15 +272,18 @@ class _TextTranslationScreenState
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {
+                            onPressed: () async {
                               if (state.sourceLang == state.targetLang) {
                                 _showSameLangDialog();
                                 return;
                               }
                               final input = _controller.text.trim();
-                              if (input.isNotEmpty &&
-                                  !LanguageDetector.matchesLanguage(
-                                      input, state.sourceLang)) {
+                              final matchesLanguage = await ref
+                                  .read(translationServiceProvider)
+                                  .matchesInputLanguage(
+                                      input, state.sourceLang);
+                              if (!context.mounted) return;
+                              if (input.isNotEmpty && !matchesLanguage) {
                                 _showLanguageMismatchDialog(state.sourceLang);
                                 return;
                               }
@@ -308,12 +307,10 @@ class _TextTranslationScreenState
                   else if (state.result != null)
                     _ResultCard(
                       result: state.result!,
-                      onPractice: () =>
-                          context.push(RouteConstants.lesson),
-                      onListen: () => ref
-                          .read(elevenLabsServiceProvider)
-                          .speak(state.result!.translatedText,
-                              state.result!.targetLang),
+                      onPractice: () => context.push(RouteConstants.lesson),
+                      onListen: () => ref.read(elevenLabsServiceProvider).speak(
+                          state.result!.translatedText,
+                          state.result!.targetLang),
                       onSave: () => _savePhrase(state.result!),
                     )
                   else if (state.error != null)
@@ -369,8 +366,7 @@ class _ResultCard extends StatelessWidget {
               IconButton(
                 tooltip: 'Copy',
                 onPressed: () {
-                  Clipboard.setData(
-                      ClipboardData(text: result.translatedText));
+                  Clipboard.setData(ClipboardData(text: result.translatedText));
                 },
                 icon: const Icon(Icons.copy_rounded,
                     color: AppColors.textSecondary),

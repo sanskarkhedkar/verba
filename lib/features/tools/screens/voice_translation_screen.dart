@@ -91,6 +91,26 @@ class _VoiceTranslationScreenState
     );
   }
 
+  void _showLanguageMismatchDialog(String sourceLang) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.bgSurface,
+        title: Text('Language mismatch', style: AppTypography.heading3),
+        content: Text(
+          'The speech does not match the selected input language. Please speak in $sourceLang.',
+          style: AppTypography.bodyM.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _startRecording() async {
     final status = await Permission.microphone.request();
     if (!status.isGranted) return;
@@ -146,15 +166,33 @@ class _VoiceTranslationScreenState
         return;
       }
 
-      final result = await ref.read(translationServiceProvider).translateText(
-            transcript.trim(),
-            sourceLang: _sourceLang,
-            targetLang: _resolvedTargetLang,
-          );
+      final trimmedTranscript = transcript.trim();
+      final translationService = ref.read(translationServiceProvider);
+      final matchesLanguage = await translationService.matchesInputLanguage(
+        trimmedTranscript,
+        _sourceLang,
+      );
+      if (!matchesLanguage) {
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+            _transcript = null;
+            _translation = null;
+          });
+          _showLanguageMismatchDialog(_sourceLang);
+        }
+        return;
+      }
+
+      final result = await translationService.translateText(
+        trimmedTranscript,
+        sourceLang: _sourceLang,
+        targetLang: _resolvedTargetLang,
+      );
 
       if (mounted) {
         setState(() {
-          _transcript = transcript.trim();
+          _transcript = trimmedTranscript;
           _translation = result.translatedText;
           _isProcessing = false;
         });

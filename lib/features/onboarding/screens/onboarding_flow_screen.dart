@@ -71,7 +71,9 @@ void _showAllLanguagesSheet(
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 class OnboardingFlowScreen extends ConsumerStatefulWidget {
-  const OnboardingFlowScreen({super.key});
+  const OnboardingFlowScreen({super.key, this.initialStepName});
+
+  final String? initialStepName;
 
   @override
   ConsumerState<OnboardingFlowScreen> createState() =>
@@ -135,16 +137,12 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
             subtitle: 'Daily utility gives you a real reason to open the app.',
             kind: _StepKind.social),
         _OnboardingStep(
-            title: 'Protect your streak',
-            subtitle: 'Set a reminder and stay consistent.',
-            kind: _StepKind.notifications),
-        _OnboardingStep(
             title: 'Unlock unlimited speaking',
             subtitle: 'One plan. Full access.',
             kind: _StepKind.paywall),
         _OnboardingStep(
             title: 'Create your account',
-            subtitle: 'Sign in to save your progress and sync across devices.',
+            subtitle: 'Sign up to save your progress and sync across devices.',
             kind: _StepKind.auth),
         _OnboardingStep(
             title: 'What should we call you?',
@@ -155,6 +153,12 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   @override
   void initState() {
     super.initState();
+    final initialStep = _onboardingStepFromName(widget.initialStepName);
+    if (initialStep != null) {
+      final initialIndex =
+          _steps.indexWhere((step) => step.kind == initialStep);
+      if (initialIndex >= 0) _index = initialIndex;
+    }
     _nameController.addListener(_onNameChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(analyticsServiceProvider).logOnboardingStart();
@@ -180,9 +184,10 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (_index > 0)
+              if (_index > 0 && step.kind != _StepKind.auth)
                 _Header(
                   index: _index,
+                  total: _steps.length,
                   progress: progress,
                   onBack: () => setState(() => _index -= 1),
                 ),
@@ -380,11 +385,13 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
 class _Header extends StatelessWidget {
   const _Header({
     required this.index,
+    required this.total,
     required this.progress,
     required this.onBack,
   });
 
   final int index;
+  final int total;
   final double progress;
   final VoidCallback onBack;
 
@@ -399,7 +406,7 @@ class _Header extends StatelessWidget {
               icon: const Icon(Icons.arrow_back_rounded),
             ),
             const Spacer(),
-            Text('${index + 1}/15', style: AppTypography.bodyS),
+            Text('${index + 1}/$total', style: AppTypography.bodyS),
           ],
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -553,8 +560,6 @@ class _StepBody extends ConsumerWidget {
           body:
               'Built for adults who want real-world language, not disconnected trivia.',
         ),
-
-      // Notifications: time picker + permission
       _StepKind.notifications => const _NotificationsStep(),
 
       // Auth: create or sign-in
@@ -877,7 +882,7 @@ class _AuthStepState extends ConsumerState<_AuthStep> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              _signInMode ? 'Sign in with email' : 'Create account',
+              _signInMode ? 'Sign in to your account' : 'Create account',
               style: AppTypography.heading3,
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -910,6 +915,15 @@ class _AuthStepState extends ConsumerState<_AuthStep> {
               icon: Icons.email_rounded,
               onPressed: _authWithEmail,
             ),
+            if (_signInMode) ...[
+              const SizedBox(height: AppSpacing.md),
+              VerbaButton(
+                label: 'Sign in with Google',
+                icon: Icons.account_circle_rounded,
+                secondary: true,
+                onPressed: _authWithGoogle,
+              ),
+            ],
             const SizedBox(height: AppSpacing.sm),
             TextButton(
               onPressed: () => setState(() => _showEmailForm = false),
@@ -1225,4 +1239,11 @@ enum _StepKind {
   paywall,
   auth,
   name,
+}
+
+_StepKind? _onboardingStepFromName(String? name) {
+  return switch (name) {
+    'auth' => _StepKind.auth,
+    _ => null,
+  };
 }

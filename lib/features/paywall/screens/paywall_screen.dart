@@ -34,9 +34,9 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     }
 
     final rcService = ref.read(revenueCatServiceProvider);
-    
-    // Check if they already have premium before doing anything. 
-    // This handles the case where the status refreshed in the background 
+
+    // Check if they already have premium before doing anything.
+    // This handles the case where the status refreshed in the background
     // or the previous screen was slightly behind.
     final alreadyPremium = await rcService.refreshPremium();
     if (alreadyPremium && mounted) {
@@ -65,7 +65,8 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     try {
       final result = await RevenueCatUI.presentPaywall(offering: offering);
       if (!mounted) return;
-      if (result == PaywallResult.purchased || result == PaywallResult.restored) {
+      if (result == PaywallResult.purchased ||
+          result == PaywallResult.restored) {
         await _syncPremium();
         if (mounted) context.pop();
         return;

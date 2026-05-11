@@ -22,44 +22,9 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _notifications = true;
   bool _soundEffects = true;
   double _speechSpeed = 1.0;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadNotificationsPref();
-  }
-
-  Future<void> _loadNotificationsPref() async {
-    final prefs = await SharedPreferences.getInstance();
-    final enabled = prefs.getBool('reminder_enabled') ?? false;
-    if (mounted) setState(() => _notifications = enabled);
-  }
-
-  Future<void> _onNotificationsToggled(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    final notifications = ref.read(localNotificationsServiceProvider);
-    if (enabled) {
-      final granted = await notifications.requestPermissions();
-      if (!granted) {
-        await prefs.setBool('reminder_enabled', false);
-        if (mounted) setState(() => _notifications = false);
-        return;
-      }
-
-      if (mounted) setState(() => _notifications = true);
-      await prefs.setBool('reminder_enabled', true);
-      final time = ref.read(onboardingProvider).notificationTime;
-      await prefs.setString('reminder_time', time);
-      await notifications.scheduleDailyReminder(time);
-    } else {
-      setState(() => _notifications = false);
-      await prefs.setBool('reminder_enabled', false);
-      await notifications.cancelDailyReminder();
-    }
-  }
+  bool _isDeletingAccount = false;
 
   // ── Display name ────────────────────────────────────────────────────────────
   void _editDisplayName() {
@@ -143,37 +108,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
     );
-  }
-
-  // ── Reminder time ───────────────────────────────────────────────────────────
-  Future<void> _editReminderTime() async {
-    final current = ref.read(onboardingProvider).notificationTime;
-    final parts = current.split(':');
-    final initial = TimeOfDay(
-      hour: int.tryParse(parts[0]) ?? 19,
-      minute: int.tryParse(parts[1]) ?? 0,
-    );
-    final time = await showTimePicker(
-      context: context,
-      initialTime: initial,
-    );
-    if (time != null && mounted) {
-      final formatted =
-          '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-      ref.read(onboardingProvider.notifier).setNotificationTime(formatted);
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('reminder_time', formatted);
-      if (_notifications) {
-        await ref
-            .read(localNotificationsServiceProvider)
-            .scheduleDailyReminder(formatted);
-      }
-      final uid = ref.read(authServiceProvider).currentUser?.uid;
-      if (uid != null) {
-        ref.read(firestoreServiceProvider).updateProfile(
-            uid, {'notificationTime': formatted}).catchError((_) {});
-      }
-    }
   }
 
   // ── Legal sheets ────────────────────────────────────────────────────────────
@@ -340,12 +274,42 @@ For questions about these terms, contact us at legal@verba.app''');
   // ── Logout ──────────────────────────────────────────────────────────────────
   Future<void> _logout() async {
     await ref.read(authServiceProvider).signOut();
-    if (mounted) context.go(RouteConstants.onboarding);
+    if (mounted) context.go('${RouteConstants.onboarding}?step=auth');
   }
 
   // ── Delete account ──────────────────────────────────────────────────────────
-  void _showDeleteDialog() {
-    showDialog<void>(
+  Future<void> _deleteAccount() async {
+    if (_isDeletingAccount) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final uid = ref.read(authServiceProvider).currentUser?.uid;
+    if (uid == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('No signed-in account found.')),
+      );
+      return;
+    }
+
+    setState(() => _isDeletingAccount = true);
+    try {
+      await ref.read(firestoreServiceProvider).deleteUserData(uid);
+      await ref.read(authServiceProvider).deleteAccount();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      if (mounted) context.go(RouteConstants.onboarding);
+    } catch (e) {
+      if (!mounted) return;
+      final message = e.toString().contains('requires-recent-login')
+          ? 'Please log out and sign in again before deleting your account.'
+          : 'Could not delete account: $e';
+      messenger.showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) setState(() => _isDeletingAccount = false);
+    }
+  }
+
+  Future<void> _showDeleteDialog() async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.bgSurface,
@@ -360,19 +324,22 @@ For questions about these terms, contact us at legal@verba.app''');
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {},
+            onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: AppColors.error),
             child: const Text('Delete'),
           ),
         ],
       ),
     );
+
+    if (confirmed == true && mounted) {
+      await _deleteAccount();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final onboarding = ref.watch(onboardingProvider);
-    final reminderTime = onboarding.notificationTime;
     final isPremium = ref.watch(premiumStatusProvider);
 
     return Scaffold(
@@ -450,35 +417,6 @@ For questions about these terms, contact us at legal@verba.app''');
                         ? null
                         : () => context.push(RouteConstants.paywall),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-
-            // Notifications section
-            _SectionHeader('Notifications'),
-            GlassCard(
-              child: Column(
-                children: [
-                  _SwitchRow(
-                    icon: Icons.notifications_rounded,
-                    title: 'Daily reminders',
-                    value: _notifications,
-                    onChanged: _onNotificationsToggled,
-                  ),
-                  if (_notifications) ...[
-                    const Divider(height: 1, color: AppColors.glassBorder),
-                    _SettingRow(
-                      icon: Icons.schedule_rounded,
-                      title: 'Reminder time',
-                      trailing: Text(
-                        reminderTime,
-                        style: AppTypography.bodyS
-                            .copyWith(color: AppColors.textSecondary),
-                      ),
-                      onTap: _editReminderTime,
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -576,10 +514,10 @@ For questions about these terms, contact us at legal@verba.app''');
 
             // Delete account
             VerbaButton(
-              label: 'Delete account',
+              label: _isDeletingAccount ? 'Deleting...' : 'Delete account',
               icon: Icons.delete_forever_rounded,
               secondary: true,
-              onPressed: _showDeleteDialog,
+              onPressed: _isDeletingAccount ? null : _showDeleteDialog,
             ),
             const SizedBox(height: AppSpacing.xl),
           ],
