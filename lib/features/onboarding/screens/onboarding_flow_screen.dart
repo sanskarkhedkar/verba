@@ -248,12 +248,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
                 VerbaButton(
                   label: 'Skip — continue as guest',
                   secondary: true,
-                  onPressed: _isNavigating
-                      ? null
-                      : () {
-                          ref.read(analyticsServiceProvider).logAuthSkipped();
-                          _next();
-                        },
+                  onPressed: _isNavigating ? null : _continueAsGuest,
                 ),
               ] else if (step.kind != _StepKind.paywall &&
                   step.kind != _StepKind.plan) ...[
@@ -301,7 +296,34 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
       await ref.read(revenueCatServiceProvider).setUserId(uid);
     } catch (_) {}
 
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('auth_required', false);
+    } catch (_) {}
+
     _next();
+  }
+
+  Future<void> _continueAsGuest() async {
+    if (_isNavigating) return;
+
+    ref.read(analyticsServiceProvider).logAuthSkipped();
+    try {
+      var uid = ref.read(authServiceProvider).currentUser?.uid;
+      if (uid == null) {
+        final cred = await ref.read(authServiceProvider).signInAnonymously();
+        uid = cred.user?.uid;
+      }
+      if (uid != null) {
+        final profile =
+            UserProfile.fromOnboarding(uid, ref.read(onboardingProvider));
+        await ref.read(firestoreServiceProvider).createUserProfile(profile);
+      }
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('auth_required', false);
+    } catch (_) {}
+
+    await _next();
   }
 
   Future<void> _next() async {
@@ -365,7 +387,13 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
   Future<void> _completeOnboarding() async {
     final uid = ref.read(authServiceProvider).currentUser?.uid;
     if (uid != null) {
-      ref
+      final profile =
+          UserProfile.fromOnboarding(uid, ref.read(onboardingProvider));
+      await ref
+          .read(firestoreServiceProvider)
+          .createUserProfile(profile)
+          .catchError((_) {});
+      await ref
           .read(firestoreServiceProvider)
           .markOnboardingComplete(uid)
           .catchError((_) {});
@@ -376,6 +404,7 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('onboarding_done', true);
+      await prefs.setBool('auth_required', false);
     } catch (_) {}
     if (mounted) context.go(RouteConstants.home);
   }

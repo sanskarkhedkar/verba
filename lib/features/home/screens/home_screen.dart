@@ -123,6 +123,11 @@ class _LearnTab extends ConsumerWidget {
               selectedTileColor: AppColors.glassBorder.withValues(alpha: 0.3),
               onTap: () {
                 ref.read(onboardingProvider.notifier).setTargetLanguage(lang);
+                final uid = ref.read(authServiceProvider).currentUser?.uid;
+                if (uid != null) {
+                  ref.read(firestoreServiceProvider).updateProfile(
+                      uid, {'targetLanguage': lang}).catchError((_) {});
+                }
                 ref.read(analyticsServiceProvider).logLanguageChanged(lang);
                 Navigator.pop(ctx);
               },
@@ -136,17 +141,24 @@ class _LearnTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final onboarding = ref.watch(onboardingProvider);
-    final name =
-        onboarding.displayName.isEmpty ? 'there' : onboarding.displayName;
-    final currentLang = onboarding.targetLanguage.isEmpty
-        ? 'German'
-        : onboarding.targetLanguage;
+    final profileData = ref.watch(userProfileStreamProvider).valueOrNull;
+    final profileName = (profileData?['displayName'] as String?)?.trim() ?? '';
+    final profileLang = (profileData?['targetLanguage'] as String?) ?? '';
+    final name = profileName.isNotEmpty
+        ? profileName
+        : onboarding.displayName.isEmpty
+            ? 'there'
+            : onboarding.displayName;
+    final currentLang = profileLang.isNotEmpty
+        ? profileLang
+        : onboarding.targetLanguage.isEmpty
+            ? 'German'
+            : onboarding.targetLanguage;
     final emoji = AppConstants.languageEmojis[currentLang] ?? '🌐';
     final code =
         _langCode[currentLang] ?? currentLang.substring(0, 2).toUpperCase();
     final isPremium = ref.watch(premiumStatusProvider);
 
-    final profileData = ref.watch(userProfileStreamProvider).valueOrNull;
     final xp = (profileData?['xp'] as int?) ?? 0;
     final streak = (profileData?['streak'] as int?) ?? 0;
     final nextLevelLabel = Helpers.xpLevelLabel(xp + Helpers.xpToNextLevel(xp));
@@ -191,7 +203,7 @@ class _LearnTab extends ConsumerWidget {
         Text('${Helpers.greeting()}, $name', style: AppTypography.heading1),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          'Your ${onboarding.targetLanguage} speaking plan is ready.',
+          'Your $currentLang speaking plan is ready.',
           style: AppTypography.bodyM.copyWith(color: AppColors.textSecondary),
         ),
         const SizedBox(height: AppSpacing.lg),

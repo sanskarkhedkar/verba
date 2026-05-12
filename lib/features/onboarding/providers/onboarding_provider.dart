@@ -45,4 +45,8 @@ class OnboardingController extends StateNotifier<OnboardingState> {
   void setNotificationTime(String value) {
     state = state.copyWith(notificationTime: value);
   }
+
+  void reset() {
+    state = const OnboardingState();
+  }
 }

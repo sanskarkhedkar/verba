@@ -28,7 +28,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   // ── Display name ────────────────────────────────────────────────────────────
   void _editDisplayName() {
-    final current = ref.read(onboardingProvider).displayName;
+    final profile = ref.read(userProfileStreamProvider).valueOrNull;
+    final profileName = (profile?['displayName'] as String?)?.trim() ?? '';
+    final current = profileName.isNotEmpty
+        ? profileName
+        : ref.read(onboardingProvider).displayName;
     final ctrl = TextEditingController(text: current);
     showDialog<void>(
       context: context,
@@ -67,7 +71,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   // ── Language picker ─────────────────────────────────────────────────────────
   void _editLanguage() {
-    final current = ref.read(onboardingProvider).targetLanguage;
+    final profile = ref.read(userProfileStreamProvider).valueOrNull;
+    final profileLang = (profile?['targetLanguage'] as String?) ?? '';
+    final current = profileLang.isNotEmpty
+        ? profileLang
+        : ref.read(onboardingProvider).targetLanguage;
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppColors.bgElevated,
@@ -274,6 +282,10 @@ For questions about these terms, contact us at legal@verba.app''');
   // ── Logout ──────────────────────────────────────────────────────────────────
   Future<void> _logout() async {
     await ref.read(authServiceProvider).signOut();
+    ref.read(onboardingProvider.notifier).reset();
+    ref.read(premiumOverrideProvider.notifier).state = false;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('auth_required', true);
     if (mounted) context.go('${RouteConstants.onboarding}?step=auth');
   }
 
@@ -340,6 +352,13 @@ For questions about these terms, contact us at legal@verba.app''');
   @override
   Widget build(BuildContext context) {
     final onboarding = ref.watch(onboardingProvider);
+    final profile = ref.watch(userProfileStreamProvider).valueOrNull;
+    final profileName = (profile?['displayName'] as String?)?.trim() ?? '';
+    final displayName =
+        profileName.isNotEmpty ? profileName : onboarding.displayName;
+    final profileLang = (profile?['targetLanguage'] as String?) ?? '';
+    final targetLanguage =
+        profileLang.isNotEmpty ? profileLang : onboarding.targetLanguage;
     final isPremium = ref.watch(premiumStatusProvider);
 
     return Scaffold(
@@ -368,9 +387,7 @@ For questions about these terms, contact us at legal@verba.app''');
                     icon: Icons.person_rounded,
                     title: 'Display name',
                     trailing: Text(
-                      onboarding.displayName.isEmpty
-                          ? 'Not set'
-                          : onboarding.displayName,
+                      displayName.isEmpty ? 'Not set' : displayName,
                       style: AppTypography.bodyS
                           .copyWith(color: AppColors.textSecondary),
                     ),
@@ -381,9 +398,9 @@ For questions about these terms, contact us at legal@verba.app''');
                     icon: Icons.language_rounded,
                     title: 'Learning language',
                     trailing: Text(
-                      onboarding.targetLanguage.isEmpty
+                      targetLanguage.isEmpty
                           ? 'Not set'
-                          : '${AppConstants.languageEmojis[onboarding.targetLanguage] ?? ''} ${onboarding.targetLanguage}',
+                          : '${AppConstants.languageEmojis[targetLanguage] ?? ''} $targetLanguage',
                       style: AppTypography.bodyS
                           .copyWith(color: AppColors.textSecondary),
                     ),

@@ -67,6 +67,20 @@ class UserProfile {
         'fcmToken': fcmToken,
         'updatedAt': FieldValue.serverTimestamp(),
       };
+
+  Map<String, dynamic> toProfileUpdateMap() {
+    return {
+      'uid': uid,
+      if (displayName.trim().isNotEmpty) 'displayName': displayName.trim(),
+      'targetLanguage': targetLanguage,
+      'level': level,
+      'goalCategory': goalCategory,
+      'dailyGoalMinutes': dailyGoalMinutes,
+      'focusAreas': focusAreas,
+      'notificationTime': notificationTime,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+  }
 }
 
 /// Firestore read/write operations for Verba user data.
@@ -78,11 +92,21 @@ class FirestoreService {
   CollectionReference get _users => _db.collection('users');
 
   // ── User Profile ──────────────────────────────────────────────────────────
-  Future<void> createUserProfile(UserProfile profile) =>
-      _users.doc(profile.uid).set(profile.toMap(), SetOptions(merge: true));
+  Future<void> createUserProfile(UserProfile profile) async {
+    final ref = _users.doc(profile.uid);
+    final snap = await ref.get();
+    if (snap.exists) {
+      await ref.set(profile.toProfileUpdateMap(), SetOptions(merge: true));
+      return;
+    }
+    await ref.set(profile.toMap(), SetOptions(merge: true));
+  }
 
   Stream<DocumentSnapshot<Map<String, dynamic>>> getUserStream(String uid) {
-    return _users.doc(uid).snapshots().cast<DocumentSnapshot<Map<String, dynamic>>>();
+    return _users
+        .doc(uid)
+        .snapshots()
+        .cast<DocumentSnapshot<Map<String, dynamic>>>();
   }
 
   Future<DocumentSnapshot<Map<String, dynamic>>> getUser(String uid) =>
@@ -104,14 +128,12 @@ class FirestoreService {
     });
   }
 
-  Future<void> recordTranslation(String uid) =>
-      _users.doc(uid).set({
+  Future<void> recordTranslation(String uid) => _users.doc(uid).set({
         'translationsCount': FieldValue.increment(1),
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-  Future<void> recordConversation(String uid) =>
-      _users.doc(uid).set({
+  Future<void> recordConversation(String uid) => _users.doc(uid).set({
         'conversationsCompleted': FieldValue.increment(1),
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
@@ -159,9 +181,8 @@ class FirestoreService {
 
   Stream<QuerySnapshot<Map<String, dynamic>>> getPhrases(String uid) {
     // ignore: unnecessary_cast — Firestore requires explicit typed reference
-    final col = _users
-        .doc(uid)
-        .collection('phrases') as CollectionReference<Map<String, dynamic>>;
+    final col = _users.doc(uid).collection('phrases')
+        as CollectionReference<Map<String, dynamic>>;
     return col.orderBy('savedAt', descending: true).limit(50).snapshots();
   }
 

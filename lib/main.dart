@@ -46,8 +46,12 @@ Future<void> main() async {
 
   final prefs = await SharedPreferences.getInstance();
   final onboardingDone = prefs.getBool('onboarding_done') ?? false;
-  final initialRoute =
-      onboardingDone ? RouteConstants.home : RouteConstants.onboarding;
+  final authRequired = prefs.getBool('auth_required') ?? false;
+  final initialRoute = authRequired || (onboardingDone && currentUserId == null)
+      ? '${RouteConstants.onboarding}?step=auth'
+      : onboardingDone
+          ? RouteConstants.home
+          : RouteConstants.onboarding;
 
   // Initialize local notifications and reschedule any saved daily reminder.
   try {
