@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -828,6 +830,8 @@ class _AuthStepState extends ConsumerState<_AuthStep> {
     super.dispose();
   }
 
+  bool get _useApple => !kIsWeb && Platform.isIOS;
+
   Future<void> _authWithGoogle() async {
     setState(() {
       _loading = true;
@@ -835,6 +839,24 @@ class _AuthStepState extends ConsumerState<_AuthStep> {
     });
     try {
       final cred = await ref.read(authServiceProvider).signInWithGoogle();
+      final isNew = cred.additionalUserInfo?.isNewUser ?? true;
+      final uid =
+          cred.user?.uid ?? ref.read(authServiceProvider).currentUser?.uid;
+      if (uid != null && mounted) await widget.onAuthSuccess(uid, isNew);
+    } catch (e) {
+      if (mounted) setState(() => _error = _friendlyError(e.toString()));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _authWithApple() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final cred = await ref.read(authServiceProvider).signInWithApple();
       final isNew = cred.additionalUserInfo?.isNewUser ?? true;
       final uid =
           cred.user?.uid ?? ref.read(authServiceProvider).currentUser?.uid;
@@ -947,10 +969,12 @@ class _AuthStepState extends ConsumerState<_AuthStep> {
             if (_signInMode) ...[
               const SizedBox(height: AppSpacing.md),
               VerbaButton(
-                label: 'Sign in with Google',
-                icon: Icons.account_circle_rounded,
+                label: _useApple ? 'Sign in with Apple' : 'Sign in with Google',
+                icon: _useApple
+                    ? Icons.apple_rounded
+                    : Icons.account_circle_rounded,
                 secondary: true,
-                onPressed: _authWithGoogle,
+                onPressed: _useApple ? _authWithApple : _authWithGoogle,
               ),
             ],
             const SizedBox(height: AppSpacing.sm),
@@ -975,9 +999,11 @@ class _AuthStepState extends ConsumerState<_AuthStep> {
           const SizedBox(height: AppSpacing.md),
         ],
         VerbaButton(
-          label: 'Continue with Google',
-          icon: Icons.account_circle_rounded,
-          onPressed: _authWithGoogle,
+          label: _useApple ? 'Continue with Apple' : 'Continue with Google',
+          icon: _useApple
+              ? Icons.apple_rounded
+              : Icons.account_circle_rounded,
+          onPressed: _useApple ? _authWithApple : _authWithGoogle,
         ),
         const SizedBox(height: AppSpacing.md),
         VerbaButton(

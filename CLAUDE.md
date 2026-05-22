@@ -63,14 +63,16 @@ Clean architecture with feature-based structure under `lib/`:
 
 | Service | Purpose | Key file |
 |---|---|---|
-| Google Gemini | AI lesson generation, speech evaluation | `core/services/gemini_service.dart` |
-| ElevenLabs | Text-to-speech for AI tutor | `core/services/elevenlabs_service.dart` |
+| Google Gemini | AI lesson generation, speech evaluation | `core/services/gemini_service.dart` via Firebase Functions |
+| ElevenLabs | Text-to-speech for AI tutor | `core/services/elevenlabs_service.dart` via Firebase Functions |
 | Firebase Auth | Google, Apple, Email sign-in | `core/services/auth_service.dart` |
 | Firestore | User data and lesson progress | `core/services/firestore_service.dart` |
 | Firebase Messaging | Push notifications | `core/services/fcm_service.dart` |
 | RevenueCat | Subscription management | `core/services/revenuecat_service.dart` |
 
-API keys are loaded from `.env` via `flutter_dotenv`: `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`, `REVENUECAT_API_KEY_IOS`, `REVENUECAT_API_KEY_ANDROID`.
+Client-safe build values are loaded from `.env` via `flutter_dotenv`: `FIREBASE_ANDROID_API_KEY`, `FIREBASE_IOS_API_KEY`, `REVENUECAT_API_KEY_IOS`, `REVENUECAT_API_KEY_ANDROID`.
+
+Gemini, ElevenLabs, and Google Translate keys must not be bundled in Flutter. They are Firebase Functions secrets consumed by the callable functions in `functions/index.js`: `GEMINI_API_KEY`, `ELEVENLABS_API_KEY`, `GOOGLE_TRANSLATE_API_KEY`.
 
 ## Key Specs
 

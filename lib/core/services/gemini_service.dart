@@ -1,98 +1,31 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
 import '../../features/learn/models/lesson.dart';
 import '../../features/onboarding/models/onboarding_state.dart';
 import '../constants/api_constants.dart';
+import 'firebase_functions_service.dart';
 
 class GeminiService {
-  const GeminiService();
+  const GeminiService([this._functions = const FirebaseFunctionsService()]);
 
-  Uri _endpoint(String model) => Uri.parse(
-        '${ApiConstants.geminiBaseUrl}/$model:generateContent'
-        '?key=${ApiConstants.geminiApiKey}',
-      );
-
-  Future<Map<String, dynamic>> _post(
-    String model,
-    Map<String, dynamic> body,
-  ) async {
-    final response = await http
-        .post(
-          _endpoint(model),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(body),
-        )
-        .timeout(
-          Duration(seconds: ApiConstants.lessonGenerationTimeoutSeconds),
-        );
-    if (response.statusCode != 200) {
-      throw Exception('Gemini ${response.statusCode}: ${response.body}');
-    }
-    return jsonDecode(response.body) as Map<String, dynamic>;
-  }
-
-  String _extractText(Map<String, dynamic> json) {
-    final candidates = json['candidates'] as List?;
-    if (candidates == null || candidates.isEmpty) return '';
-    final parts =
-        candidates[0]['content']['parts'] as List? ?? [];
-    if (parts.isEmpty) return '';
-    return (parts[0]['text'] as String? ?? '').trim();
-  }
+  final FirebaseFunctionsService _functions;
 
   // ── Lesson Generation ────────────────────────────────────────────────────────
 
   Future<Lesson> generateLesson(OnboardingState context) async {
-    final prompt = '''
-You are Verba's AI language tutor. Generate a structured speaking lesson.
-
-Context:
-- User's native language: English
-- Target language: ${context.targetLanguage}
-- Current level: ${context.level}
-- Goal: ${context.goalCategory}
-- Lesson theme: Daily conversational practice
-
-Generate a JSON lesson with exactly 7 speaking turns. Return ONLY valid JSON, no markdown.
-
-Format:
-{
-  "title": "Lesson title",
-  "theme": "Brief theme description",
-  "turns": [
-    {
-      "ai_prompt_text": "What the AI tutor says to the user (in English)",
-      "target_phrase": "Phrase user should say in ${context.targetLanguage}",
-      "phonetic_guide": "Readable phonetic spelling",
-      "evaluation_focus": "What to evaluate",
-      "success_feedback": "Encouraging message on success",
-      "correction_hint": "Helpful hint on failure"
-    }
-  ]
-}''';
-
     try {
-      final json = await _post(ApiConstants.geminiModel, {
-        'contents': [
-          {
-            'parts': [
-              {'text': prompt},
-            ],
-          },
-        ],
-        'generationConfig': {
-          'temperature': 0.7,
-          'maxOutputTokens': 1024,
-          'responseMimeType': 'application/json',
+      final lessonJson = await _functions.call(
+        'generateLesson',
+        {
+          'targetLanguage': context.targetLanguage,
+          'level': context.level,
+          'goalCategory': context.goalCategory,
         },
-      });
-
-      final text = _extractText(json);
-      final lessonJson = jsonDecode(text) as Map<String, dynamic>;
+        timeout: Duration(seconds: ApiConstants.lessonGenerationTimeoutSeconds),
+      );
       return _parseLesson(lessonJson);
     } catch (_) {
       return _fallbackLesson(context.targetLanguage, context.goalCategory);
@@ -108,8 +41,7 @@ Format:
         phoneticGuide: turn['phonetic_guide'] as String? ?? '',
         evaluationFocus: turn['evaluation_focus'] as String? ?? '',
         successFeedback: turn['success_feedback'] as String? ?? 'Well done!',
-        correctionHint:
-            turn['correction_hint'] as String? ?? 'Try once more.',
+        correctionHint: turn['correction_hint'] as String? ?? 'Try once more.',
       );
     }).toList();
 
@@ -127,42 +59,20 @@ Format:
     LessonTurn turn,
     String transcription,
   ) async {
-    final prompt = '''
-Evaluate this language learner's pronunciation attempt.
-
-Target phrase: "${turn.targetPhrase}"
-Phonetic target: "${turn.phoneticGuide}"
-User's transcribed speech: "${transcription.isEmpty ? '[no speech detected]' : transcription}"
-Evaluation focus: ${turn.evaluationFocus}
-
-Rate on:
-1. accuracy (0-100): Did they say the right words?
-2. pronunciation (0-100): Were phonemes correct?
-3. fluency (0-100): Was speech natural?
-
-Return ONLY valid JSON, no markdown:
-{"accuracy": INT, "pronunciation": INT, "fluency": INT, "feedback_type": "success"|"warning"|"error", "feedback_message": STRING}
-
-Rules: success = accuracy>=85, warning = accuracy 60-84, error = accuracy<60''';
-
     try {
-      final json = await _post(ApiConstants.geminiModel, {
-        'contents': [
-          {
-            'parts': [
-              {'text': prompt},
-            ],
+      final evalJson = await _functions.call(
+        'evaluateSpeech',
+        {
+          'turn': {
+            'targetPhrase': turn.targetPhrase,
+            'phoneticGuide': turn.phoneticGuide,
+            'evaluationFocus': turn.evaluationFocus,
+            'correctionHint': turn.correctionHint,
           },
-        ],
-        'generationConfig': {
-          'temperature': 0.3,
-          'maxOutputTokens': 256,
-          'responseMimeType': 'application/json',
+          'transcription': transcription,
         },
-      });
-
-      final text = _extractText(json);
-      final evalJson = jsonDecode(text) as Map<String, dynamic>;
+        timeout: const Duration(seconds: ApiConstants.apiTimeoutSeconds),
+      );
       return _parseFeedback(evalJson, turn);
     } catch (_) {
       return SpeechFeedback(
@@ -207,32 +117,17 @@ Rules: success = accuracy>=85, warning = accuracy 60-84, error = accuracy<60''';
       final bytes = await audioFile.readAsBytes();
       final base64Audio = base64Encode(bytes);
 
-      final json = await _post(ApiConstants.geminiModel, {
-        'contents': [
-          {
-            'parts': [
-              {
-                'text':
-                    'Transcribe the spoken words in this audio exactly. '
-                    'Language: $languageHint. '
-                    'Return only the transcription, no other text.',
-              },
-              {
-                'inline_data': {
-                  'mime_type': 'audio/wav',
-                  'data': base64Audio,
-                },
-              },
-            ],
-          },
-        ],
-        'generationConfig': {
-          'temperature': 0.0,
-          'maxOutputTokens': 256,
+      final json = await _functions.call(
+        'transcribeAudio',
+        {
+          'audioBase64': base64Audio,
+          'mimeType': 'audio/wav',
+          'languageHint': languageHint,
         },
-      });
+        timeout: const Duration(seconds: ApiConstants.apiTimeoutSeconds),
+      );
 
-      return _extractText(json);
+      return json['transcription'] as String? ?? '';
     } catch (_) {
       return '';
     }

@@ -1,8 +1,6 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-
 import '../constants/api_constants.dart';
 import '../utils/language_detector.dart';
+import 'firebase_functions_service.dart';
 
 class TranslationResult {
   const TranslationResult({
@@ -21,7 +19,10 @@ class TranslationResult {
 }
 
 class TranslationService {
-  const TranslationService();
+  const TranslationService(
+      [this._functions = const FirebaseFunctionsService()]);
+
+  final FirebaseFunctionsService _functions;
 
   static const _langToIso = {
     'English': 'en',
@@ -55,30 +56,12 @@ class TranslationService {
   Future<String?> detectLanguage(String text) async {
     if (text.trim().isEmpty) return null;
 
-    final apiKey = ApiConstants.googleTranslateApiKey;
-    if (apiKey.isEmpty || apiKey == 'your_google_translate_api_key_here') {
-      return null;
-    }
-
-    final url = Uri.parse(
-      '${ApiConstants.googleTranslateUrl}/detect?key=$apiKey',
+    final data = await _functions.call(
+      'detectLanguage',
+      {'text': text.trim()},
+      timeout: const Duration(seconds: ApiConstants.apiTimeoutSeconds),
     );
-
-    final response = await http
-        .post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'q': text.trim()}),
-        )
-        .timeout(const Duration(seconds: ApiConstants.apiTimeoutSeconds));
-
-    if (response.statusCode != 200) return null;
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final detections = data['data']?['detections'] as List?;
-    final firstGroup = detections?.firstOrNull as List?;
-    final detection = firstGroup?.firstOrNull as Map<String, dynamic>?;
-    return detection?['language'] as String?;
+    return data['language'] as String?;
   }
 
   Future<bool> matchesInputLanguage(String text, String sourceLang) async {
@@ -100,46 +83,21 @@ class TranslationService {
     required String sourceLang,
     required String targetLang,
   }) async {
-    final apiKey = ApiConstants.googleTranslateApiKey;
-    if (apiKey.isEmpty || apiKey == 'your_google_translate_api_key_here') {
-      throw Exception('Google Translate API key not configured');
-    }
-
-    final url = Uri.parse(
-      '${ApiConstants.googleTranslateUrl}?key=$apiKey',
+    final data = await _functions.call(
+      'translateText',
+      {
+        'text': text,
+        'sourceLang': sourceLang,
+        'targetLang': targetLang,
+      },
+      timeout: const Duration(seconds: ApiConstants.apiTimeoutSeconds),
     );
-
-    final response = await http
-        .post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'q': text,
-            'source': _toIso(sourceLang),
-            'target': _toIso(targetLang),
-            'format': 'text',
-          }),
-        )
-        .timeout(const Duration(seconds: ApiConstants.apiTimeoutSeconds));
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final translations = data['data']?['translations'] as List?;
-      final firstTranslation =
-          translations?.firstOrNull as Map<String, dynamic>?;
-      final translated = firstTranslation?['translatedText'] as String? ?? text;
-      final detectedLanguage =
-          firstTranslation?['detectedSourceLanguage'] as String?;
-      return TranslationResult(
-        originalText: text,
-        translatedText: translated,
-        sourceLang: sourceLang,
-        targetLang: targetLang,
-        detectedLanguage: detectedLanguage,
-      );
-    }
-
-    throw Exception(
-        'Translation failed: ${response.statusCode} ${response.body}');
+    return TranslationResult(
+      originalText: data['originalText'] as String? ?? text,
+      translatedText: data['translatedText'] as String? ?? text,
+      sourceLang: data['sourceLang'] as String? ?? sourceLang,
+      targetLang: data['targetLang'] as String? ?? targetLang,
+      detectedLanguage: data['detectedLanguage'] as String?,
+    );
   }
 }

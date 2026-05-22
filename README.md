@@ -12,7 +12,7 @@ Verba is an AI-powered language learning companion built with Flutter. It utiliz
 ## Tech Stack
 - **Framework**: Flutter
 - **State Management**: Riverpod (`flutter_riverpod`)
-- **Backend & Auth**: Firebase (Auth, Firestore, Storage)
+- **Backend & Auth**: Firebase (Auth, Firestore, Storage, Cloud Functions)
 - **AI Models**: Google Gemini (LLM) & ElevenLabs (TTS/Voice)
 - **In-App Purchases**: RevenueCat
 - **Routing**: go_router
@@ -25,8 +25,9 @@ Verba is an AI-powered language learning companion built with Flutter. It utiliz
 Before you begin, ensure you have the following installed:
 - [Flutter SDK](https://docs.flutter.dev/get-started/install) (latest stable version recommended)
 - [Android Studio](https://developer.android.com/studio) or [VS Code](https://code.visualstudio.com/)
-- An active Firebase Project
-- API Keys for Gemini, ElevenLabs, and RevenueCat.
+- An active Firebase project
+- Firebase CLI access for deploying Cloud Functions
+- RevenueCat public SDK keys for app builds
 
 ### 1. Clone the repository
 ```bash
@@ -41,11 +42,11 @@ flutter pub get
 ```
 
 ### 3. Environment Variables
-The app requires an environment file to securely store API keys. 
+The Flutter app should only receive client-safe configuration. Gemini, ElevenLabs,
+and Google Translate keys must stay in Firebase Functions secrets, not in `.env`.
+
 Create a `.env` file in the root of the project directory with the following keys:
 ```env
-GEMINI_API_KEY=your_gemini_api_key_here
-ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
 FIREBASE_ANDROID_API_KEY=your_firebase_android_api_key_here
 FIREBASE_IOS_API_KEY=your_firebase_ios_api_key_here
 REVENUECAT_API_KEY_IOS=your_revenuecat_ios_key_here
@@ -57,15 +58,24 @@ To connect the app to Firebase, you need to add your platform-specific configura
 - **Android**: Place your `google-services.json` file inside `android/app/`.
 - **iOS**: Place your `GoogleService-Info.plist` file inside `ios/Runner/`.
 
-*Note: These files are ignored by git to protect your Firebase credentials.*
+*Note: These files are ignored by git.*
 
-### 5. Code Generation (Optional)
+### 5. Firebase Functions Secrets
+Set the server-side secrets before deploying Functions:
+```bash
+firebase functions:secrets:set GEMINI_API_KEY
+firebase functions:secrets:set ELEVENLABS_API_KEY
+firebase functions:secrets:set GOOGLE_TRANSLATE_API_KEY
+firebase deploy --only functions
+```
+
+### 6. Code Generation (Optional)
 If you modify Riverpod models or Freezed classes, you may need to run the build runner to regenerate the code:
 ```bash
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-### 6. Run the App
+### 7. Run the App
 Launch an emulator or connect a physical device, then run:
 ```bash
 flutter run

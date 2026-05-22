@@ -33,6 +33,42 @@ class AuthService {
     return _auth.signInAnonymously();
   }
 
+  // Retry the credential-exchange call once on `channel-error`. The very first
+  // Pigeon call to FirebaseAuthHostApi on a cold start can fail because the
+  // platform plugin isn't fully bound yet. The failed attempt itself completes
+  // the binding, so a short delay + retry succeeds.
+  bool _isChannelError(Object e) {
+    if (e is FirebaseAuthException && e.code == 'channel-error') return true;
+    final s = e.toString();
+    return s.contains('channel-error') ||
+        s.contains('FirebaseAuthHostApi');
+  }
+
+  Future<UserCredential> _signInWithCredentialResilient(
+    AuthCredential credential,
+  ) async {
+    try {
+      return await _auth.signInWithCredential(credential);
+    } catch (e) {
+      if (!_isChannelError(e)) rethrow;
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      return _auth.signInWithCredential(credential);
+    }
+  }
+
+  Future<UserCredential> _linkWithCredentialResilient(
+    User user,
+    AuthCredential credential,
+  ) async {
+    try {
+      return await user.linkWithCredential(credential);
+    } catch (e) {
+      if (!_isChannelError(e)) rethrow;
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      return user.linkWithCredential(credential);
+    }
+  }
+
   // ── Google ─────────────────────────────────────────────────────────────────
   Future<UserCredential> signInWithGoogle() async {
     final googleUser = await GoogleSignIn().signIn();
@@ -47,19 +83,18 @@ class AuthService {
     final currentUser = _auth.currentUser;
     if (currentUser != null && currentUser.isAnonymous) {
       try {
-        return await currentUser.linkWithCredential(credential);
+        return await _linkWithCredentialResilient(currentUser, credential);
       } on FirebaseAuthException catch (e) {
         // Account already exists — just sign in directly
         if (e.code == 'credential-already-in-use' ||
             e.code == 'email-already-in-use' ||
             e.code == 'account-exists-with-different-credential') {
-          return _auth.signInWithCredential(
-              e.credential ?? credential);
+          return _signInWithCredentialResilient(e.credential ?? credential);
         }
         rethrow;
       }
     }
-    return _auth.signInWithCredential(credential);
+    return _signInWithCredentialResilient(credential);
   }
 
   // ── Apple ──────────────────────────────────────────────────────────────────
@@ -78,9 +113,19 @@ class AuthService {
 
     final currentUser = _auth.currentUser;
     if (currentUser != null && currentUser.isAnonymous) {
-      return currentUser.linkWithCredential(oauthCredential);
+      try {
+        return await _linkWithCredentialResilient(currentUser, oauthCredential);
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'credential-already-in-use' ||
+            e.code == 'email-already-in-use' ||
+            e.code == 'account-exists-with-different-credential') {
+          return _signInWithCredentialResilient(
+              e.credential ?? oauthCredential);
+        }
+        rethrow;
+      }
     }
-    return _auth.signInWithCredential(oauthCredential);
+    return _signInWithCredentialResilient(oauthCredential);
   }
 
   // ── Email/Password ─────────────────────────────────────────────────────────

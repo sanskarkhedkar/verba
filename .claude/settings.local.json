@@ -16,7 +16,14 @@
       "Bash(flutter --version)",
       "Bash(git *)",
       "Bash(grep -E \"^\\(web|windows|linux|macos\\)$\")",
-      "Bash(findstr /i \"google_fonts\")"
+      "Bash(findstr /i \"google_fonts\")",
+      "Bash(firebase functions:log --limit 50)",
+      "Bash(firebase functions:log --help)",
+      "Bash(firebase functions:log *)",
+      "Bash(firebase deploy *)",
+      "Bash(firebase functions:log -n 400 --only generateLesson)",
+      "Read(//tmp/**)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

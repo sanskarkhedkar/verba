@@ -32,6 +32,18 @@ Future<void> main() async {
     await Firebase.initializeApp(options: firebaseOptions);
     await const FirebaseBootstrapService().configure();
     currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    // Force the firebase_auth Pigeon channel to fully bind on cold start.
+    // Without this, the first signInWithCredential after a cold start can
+    // fail with `[firebase_auth/channel-error]` while signInAnonymously
+    // works — calling any other async method warms the platform side.
+    // signOut() is a no-op when no user is signed in.
+    if (currentUserId == null) {
+      try {
+        await FirebaseAuth.instance.signOut();
+      } on Object {
+        // Best-effort — the failing call itself still binds the channel.
+      }
+    }
   }
 
   try {
