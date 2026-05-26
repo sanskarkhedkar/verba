@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
@@ -136,6 +137,17 @@ class AuthService {
 
   // ── Apple ──────────────────────────────────────────────────────────────────
   Future<UserCredential> signInWithApple() async {
+    // Sign in with Apple does not work on iOS Simulator.
+    // It requires a real device with an Apple ID signed in via Settings.
+    if (defaultTargetPlatform == TargetPlatform.iOS &&
+        !kIsWeb &&
+        await _isSimulator()) {
+      throw Exception(
+        'Sign in with Apple is not supported on the iOS Simulator.\n'
+        'Please test on a real iPhone device.',
+      );
+    }
+
     final appleCredential = await SignInWithApple.getAppleIDCredential(
       scopes: [
         AppleIDAuthorizationScopes.email,
@@ -167,6 +179,12 @@ class AuthService {
       }
     }
     return _signInWithCredentialResilient(oauthCredential);
+  }
+
+  /// Returns true when running inside the iOS Simulator.
+  Future<bool> _isSimulator() async {
+    // sign_in_with_apple exposes a static availability check
+    return !await SignInWithApple.isAvailable();
   }
 
   // ── Email/Password ─────────────────────────────────────────────────────────
