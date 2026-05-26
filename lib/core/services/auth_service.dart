@@ -33,27 +33,58 @@ class AuthService {
     return _auth.signInAnonymously();
   }
 
-  // Retry the credential-exchange call once on `channel-error`. The very first
-  // Pigeon call to FirebaseAuthHostApi on a cold start can fail because the
-  // platform plugin isn't fully bound yet. The failed attempt itself completes
-  // the binding, so a short delay + retry succeeds.
   bool _isChannelError(Object e) {
     if (e is FirebaseAuthException && e.code == 'channel-error') return true;
     final s = e.toString();
-    return s.contains('channel-error') ||
-        s.contains('FirebaseAuthHostApi');
+    return s.contains('channel-error') || s.contains('FirebaseAuthHostApi');
+  }
+
+  // After GoogleSignIn().signIn() or SignInWithApple() returns, the Flutter
+  // activity is resuming from a sub-activity (SignInHubActivity / ASWebAuth).
+  // During this transition, firebase_auth's onAttachedToActivity re-runs on
+  // the Android main thread to re-bind FirebaseAuthHostApi, while the Dart
+  // side immediately wants to call signInWithCredential through that same
+  // Pigeon channel — causing the channel-error race.
+  //
+  // The fix: make a cheap, side-effect-free FirebaseAuthHostApi call right
+  // after the external sign-in returns. Once that call succeeds we know the
+  // Pigeon binding is complete and signInWithCredential will succeed.
+  // signOut() is a genuine no-op when no user is signed in; getIdToken()
+  // is safe to call on an existing (anonymous) user.
+  Future<void> _warmUpAuthChannel() async {
+    const maxAttempts = 6;
+    for (var i = 0; i < maxAttempts; i++) {
+      try {
+        final user = _auth.currentUser;
+        if (user != null) {
+          await user.getIdToken(); // uses FirebaseAuthHostApi
+        } else {
+          await _auth.signOut(); // uses FirebaseAuthHostApi; no-op with no user
+        }
+        return; // channel is bound
+      } catch (e) {
+        if (!_isChannelError(e) || i == maxAttempts - 1) return;
+        await Future<void>.delayed(Duration(milliseconds: 200 * (i + 1)));
+      }
+    }
   }
 
   Future<UserCredential> _signInWithCredentialResilient(
     AuthCredential credential,
   ) async {
-    try {
-      return await _auth.signInWithCredential(credential);
-    } catch (e) {
-      if (!_isChannelError(e)) rethrow;
-      await Future<void>.delayed(const Duration(milliseconds: 600));
-      return _auth.signInWithCredential(credential);
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await _auth.signInWithCredential(credential);
+      } catch (e) {
+        if (!_isChannelError(e)) rethrow;
+        if (attempt == 2) rethrow;
+        // Exponential back-off: 600 ms, 1 200 ms — gives the Pigeon channel
+        // time to fully bind on slow/cold-start devices.
+        await Future<void>.delayed(Duration(milliseconds: 600 * (attempt + 1)));
+      }
     }
+    // Unreachable but required by the type system.
+    return _auth.signInWithCredential(credential);
   }
 
   Future<UserCredential> _linkWithCredentialResilient(
@@ -73,6 +104,12 @@ class AuthService {
   Future<UserCredential> signInWithGoogle() async {
     final googleUser = await GoogleSignIn().signIn();
     if (googleUser == null) throw Exception('Google sign-in cancelled');
+
+    // signIn() launches SignInHubActivity. When it finishes, firebase_auth's
+    // onAttachedToActivity re-binds FirebaseAuthHostApi concurrently with our
+    // return to Dart. Warm up the Pigeon channel before the credential call
+    // so that race is resolved before we need the channel.
+    await _warmUpAuthChannel();
 
     final googleAuth = await googleUser.authentication;
     final credential = GoogleAuthProvider.credential(
@@ -105,6 +142,10 @@ class AuthService {
         AppleIDAuthorizationScopes.fullName,
       ],
     );
+
+    // Same race as Google sign-in: ASWebAuthenticationSession / SFSafariVC
+    // causes a view-controller transition that can disrupt the Pigeon binding.
+    await _warmUpAuthChannel();
 
     final oauthCredential = OAuthProvider('apple.com').credential(
       idToken: appleCredential.identityToken,

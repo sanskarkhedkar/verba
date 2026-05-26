@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "411659663243",
+    "project_id": "verba-translation-app",
+    "storage_bucket": "verba-translation-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:411659663243:android:b7af093d428d7293ee218e",
+        "android_client_info": {
+          "package_name": "com.verba.android"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "411659663243-7v4909cb1n111lb3vkcnuj9g1bo3ck79.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.verba.android",
+            "certificate_hash": "34a30ef943414d94ec7de0cb0926d994faa47114"
+          }
+        },
+        {
+          "client_id": "411659663243-i13s0deaio3vb7j16g3agqubo2iudvt4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1drdIew4djhmRBBDXP1hhKFBBW1VO2N0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "411659663243-i13s0deaio3vb7j16g3agqubo2iudvt4.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "411659663243-bfipgo2p02bo7he30i1eal7boa8urht0.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.verba.apple"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
