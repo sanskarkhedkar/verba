@@ -96,14 +96,22 @@ class AuthService {
       return await user.linkWithCredential(credential);
     } catch (e) {
       if (!_isChannelError(e)) rethrow;
-      await Future<void>.delayed(const Duration(milliseconds: 600));
-      return user.linkWithCredential(credential);
+      // On a channel-error during linking, the Pigeon binding is now warmed.
+      // Retrying linkWithCredential can fail if the anonymous session was
+      // partially invalidated. Delete the anonymous user silently and fall
+      // back to a direct sign-in instead.
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      try {
+        await user.delete();
+      } catch (_) {}
+      return _auth.signInWithCredential(credential);
     }
   }
 
   // ── Google ─────────────────────────────────────────────────────────────────
   Future<UserCredential> signInWithGoogle() async {
-    final googleUser = await GoogleSignIn().signIn();
+    final googleSignIn = GoogleSignIn();
+    final googleUser = await googleSignIn.signIn();
     if (googleUser == null) throw Exception('Google sign-in cancelled');
 
     // signIn() launches SignInHubActivity. When it finishes, firebase_auth's
@@ -123,10 +131,13 @@ class AuthService {
       try {
         return await _linkWithCredentialResilient(currentUser, credential);
       } on FirebaseAuthException catch (e) {
-        // Account already exists — just sign in directly
+        // Account already exists — delete anonymous user and sign in directly
         if (e.code == 'credential-already-in-use' ||
             e.code == 'email-already-in-use' ||
             e.code == 'account-exists-with-different-credential') {
+          try {
+            await currentUser.delete();
+          } catch (_) {}
           return _signInWithCredentialResilient(e.credential ?? credential);
         }
         rethrow;
