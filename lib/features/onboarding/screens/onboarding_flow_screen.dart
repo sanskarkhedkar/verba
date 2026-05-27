@@ -493,6 +493,7 @@ class _StepBody extends ConsumerWidget {
                 'Japanese',
               ],
               selected: state.targetLanguage,
+              showFlags: true,
               onTap: controller.setTargetLanguage,
             ),
             const SizedBox(height: AppSpacing.md),
@@ -1161,12 +1162,14 @@ class _OptionGrid extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.multi = false,
+    this.showFlags = false,
   });
 
   final List<String> options;
   final String selected;
   final ValueChanged<String> onTap;
   final bool multi;
+  final bool showFlags;
 
   @override
   Widget build(BuildContext context) {
@@ -1187,12 +1190,27 @@ class _OptionGrid extends StatelessWidget {
           onTap: () => onTap(option),
           child: Row(
             children: [
-              Icon(
-                active ? Icons.check_circle_rounded : Icons.language_rounded,
-                color: active ? AppColors.textAccent : AppColors.textSecondary,
-              ),
+              if (showFlags)
+                Text(
+                  AppConstants.languageEmojis[option] ?? '🌍',
+                  style: const TextStyle(fontSize: 18),
+                )
+              else
+                Icon(
+                  active ? Icons.check_circle_rounded : Icons.language_rounded,
+                  color: active ? AppColors.textAccent : AppColors.textSecondary,
+                ),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(child: Text(option, style: AppTypography.bodyM)),
+              Expanded(
+                child: Text(
+                  option,
+                  style: AppTypography.bodyM.copyWith(
+                    color: active ? AppColors.textAccent : AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              if (showFlags && active)
+                const Icon(Icons.check_circle_rounded, size: 16, color: AppColors.textAccent),
             ],
           ),
         );

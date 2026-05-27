@@ -37,8 +37,7 @@ class _ImageTranslationScreenState
 
   String get _resolvedTargetLang {
     if (_targetLang != null) return _targetLang!;
-    final learning = ref.read(onboardingProvider).targetLanguage;
-    return learning.isEmpty || learning == _sourceLang ? 'German' : learning;
+    return ref.read(targetLanguageProvider);
   }
 
   @override

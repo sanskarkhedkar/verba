@@ -17,9 +17,7 @@ import '../widgets/language_selector.dart';
 
 final _textTranslationProvider = StateNotifierProvider.autoDispose<
     _TextTranslationController, _TextTranslationState>((ref) {
-  final learning = ref.read(onboardingProvider).targetLanguage;
-  final initialTarget =
-      learning.isEmpty || learning == 'English' ? 'German' : learning;
+  final initialTarget = ref.read(targetLanguageProvider);
   return _TextTranslationController(
     ref,
     initial: _TextTranslationState(targetLang: initialTarget),

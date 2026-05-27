@@ -99,7 +99,11 @@ class LessonController extends StateNotifier<LessonState> {
   Future<void> loadLesson({String? practicePhrase}) async {
     state = state.copyWith(loading: true, clearFeedback: true, clearError: true);
     try {
-      final context = ref.read(onboardingProvider);
+      var context = ref.read(onboardingProvider);
+      final resolvedLang = ref.read(targetLanguageProvider);
+      if (context.targetLanguage != resolvedLang) {
+        context = context.copyWith(targetLanguage: resolvedLang);
+      }
 
       // ── Practice-phrase mode: instant single-turn drill ─────────────────────
       if (practicePhrase != null && practicePhrase.trim().isNotEmpty) {
@@ -157,7 +161,7 @@ class LessonController extends StateNotifier<LessonState> {
   Future<void> speakCurrentTurn() async {
     final turn = state.activeTurn;
     if (turn == null) return;
-    final language = ref.read(onboardingProvider).targetLanguage;
+    final language = ref.read(targetLanguageProvider);
     await ref.read(elevenLabsServiceProvider).speak(turn.targetPhrase, language);
   }
 
@@ -250,7 +254,7 @@ class LessonController extends StateNotifier<LessonState> {
               .read(sttServiceProvider)
               .transcribeAudio(
                 File(path),
-                ref.read(onboardingProvider).targetLanguage,
+                ref.read(targetLanguageProvider),
               )
           : '';
 
@@ -277,7 +281,7 @@ class LessonController extends StateNotifier<LessonState> {
 
       // On error feedback, play correct pronunciation slowly
       if (result.type == FeedbackType.error) {
-        final language = ref.read(onboardingProvider).targetLanguage;
+        final language = ref.read(targetLanguageProvider);
         ref
             .read(elevenLabsServiceProvider)
             .speakSlow(turn.targetPhrase, language);
@@ -308,7 +312,7 @@ class LessonController extends StateNotifier<LessonState> {
 
     // Pre-load audio for next turn
     if (lesson != null && next < lesson.turns.length) {
-      final language = ref.read(onboardingProvider).targetLanguage;
+      final language = ref.read(targetLanguageProvider);
       _preloadTurnAudio(lesson.turns[next], language);
     }
 
@@ -319,7 +323,7 @@ class LessonController extends StateNotifier<LessonState> {
   }
 
   Future<void> _persistLessonResult(Lesson lesson) async {
-    final language = ref.read(onboardingProvider).targetLanguage;
+    final language = ref.read(targetLanguageProvider);
     ref.read(analyticsServiceProvider).logLessonComplete(
           language, state.xpEarned, lesson.turns.length);
     try {

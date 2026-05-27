@@ -46,8 +46,7 @@ class _FaceToFaceScreenState extends ConsumerState<FaceToFaceScreen> {
 
   String get _resolvedLangB {
     if (_langB != null) return _langB!;
-    final learning = ref.read(onboardingProvider).targetLanguage;
-    return learning.isEmpty || learning == _langA ? 'German' : learning;
+    return ref.read(targetLanguageProvider);
   }
 
   @override

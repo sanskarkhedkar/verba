@@ -149,11 +149,7 @@ class _LearnTab extends ConsumerWidget {
         : onboarding.displayName.isEmpty
             ? 'there'
             : onboarding.displayName;
-    final currentLang = profileLang.isNotEmpty
-        ? profileLang
-        : onboarding.targetLanguage.isEmpty
-            ? 'German'
-            : onboarding.targetLanguage;
+    final currentLang = ref.watch(targetLanguageProvider);
     final emoji = AppConstants.languageEmojis[currentLang] ?? '🌐';
     final code =
         _langCode[currentLang] ?? currentLang.substring(0, 2).toUpperCase();
