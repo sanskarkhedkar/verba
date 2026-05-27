@@ -28,128 +28,86 @@ class AuthService {
     return _auth.authStateChanges();
   }
 
-  // ── Anonymous ──────────────────────────────────────────────────────────────
-  Future<UserCredential> signInAnonymously() {
-    if (!_isReady) throw Exception('Firebase not initialized');
-    return _auth.signInAnonymously();
-  }
+  // ─────────────────────────────────────────────────────────────
+  // Anonymous Sign In
+  // ─────────────────────────────────────────────────────────────
 
-  bool _isChannelError(Object e) {
-    if (e is FirebaseAuthException && e.code == 'channel-error') return true;
-    final s = e.toString();
-    return s.contains('channel-error') || s.contains('FirebaseAuthHostApi');
-  }
-
-  // After GoogleSignIn().signIn() or SignInWithApple() returns, the Flutter
-  // activity is resuming from a sub-activity (SignInHubActivity / ASWebAuth).
-  // During this transition, firebase_auth's onAttachedToActivity re-runs on
-  // the Android main thread to re-bind FirebaseAuthHostApi, while the Dart
-  // side immediately wants to call signInWithCredential through that same
-  // Pigeon channel — causing the channel-error race.
-  //
-  // The fix: make a cheap, side-effect-free FirebaseAuthHostApi call right
-  // after the external sign-in returns. Once that call succeeds we know the
-  // Pigeon binding is complete and signInWithCredential will succeed.
-  // signOut() is a genuine no-op when no user is signed in; getIdToken()
-  // is safe to call on an existing (anonymous) user.
-  Future<void> _warmUpAuthChannel() async {
-    const maxAttempts = 6;
-    for (var i = 0; i < maxAttempts; i++) {
-      try {
-        final user = _auth.currentUser;
-        if (user != null) {
-          await user.getIdToken(); // uses FirebaseAuthHostApi
-        } else {
-          await _auth.signOut(); // uses FirebaseAuthHostApi; no-op with no user
-        }
-        return; // channel is bound
-      } catch (e) {
-        if (!_isChannelError(e) || i == maxAttempts - 1) return;
-        await Future<void>.delayed(Duration(milliseconds: 200 * (i + 1)));
-      }
+  Future<UserCredential> signInAnonymously() async {
+    if (!_isReady) {
+      throw Exception('Firebase not initialized');
     }
+
+    return await _auth.signInAnonymously();
   }
 
-  Future<UserCredential> _signInWithCredentialResilient(
-    AuthCredential credential,
-  ) async {
-    for (var attempt = 0; attempt < 3; attempt++) {
-      try {
-        return await _auth.signInWithCredential(credential);
-      } catch (e) {
-        if (!_isChannelError(e)) rethrow;
-        if (attempt == 2) rethrow;
-        // Exponential back-off: 600 ms, 1 200 ms — gives the Pigeon channel
-        // time to fully bind on slow/cold-start devices.
-        await Future<void>.delayed(Duration(milliseconds: 600 * (attempt + 1)));
-      }
-    }
-    // Unreachable but required by the type system.
-    return _auth.signInWithCredential(credential);
-  }
+  // ─────────────────────────────────────────────────────────────
+  // Google Sign In
+  // ─────────────────────────────────────────────────────────────
 
-  Future<UserCredential> _linkWithCredentialResilient(
-    User user,
-    AuthCredential credential,
-  ) async {
-    try {
-      return await user.linkWithCredential(credential);
-    } catch (e) {
-      if (!_isChannelError(e)) rethrow;
-      // On a channel-error during linking, the Pigeon binding is now warmed.
-      // Retrying linkWithCredential can fail if the anonymous session was
-      // partially invalidated. Delete the anonymous user silently and fall
-      // back to a direct sign-in instead.
-      await Future<void>.delayed(const Duration(milliseconds: 400));
-      try {
-        await user.delete();
-      } catch (_) {}
-      return _auth.signInWithCredential(credential);
-    }
-  }
-
-  // ── Google ─────────────────────────────────────────────────────────────────
   Future<UserCredential> signInWithGoogle() async {
-    final googleSignIn = GoogleSignIn();
-    final googleUser = await googleSignIn.signIn();
-    if (googleUser == null) throw Exception('Google sign-in cancelled');
+    final GoogleSignIn googleSignIn = GoogleSignIn(
+      serverClientId:
+          '411659663243-i13s0deaio3vb7j16g3agqubo2iudvt4.apps.googleusercontent.com',
+    );
 
-    // signIn() launches SignInHubActivity. When it finishes, firebase_auth's
-    // onAttachedToActivity re-binds FirebaseAuthHostApi concurrently with our
-    // return to Dart. Warm up the Pigeon channel before the credential call
-    // so that race is resolved before we need the channel.
-    await _warmUpAuthChannel();
+    // Trigger Google Sign-In flow
+    final GoogleSignInAccount? googleUser =
+        await googleSignIn.signIn();
 
-    final googleAuth = await googleUser.authentication;
-    final credential = GoogleAuthProvider.credential(
+    if (googleUser == null) {
+      throw Exception('Google sign in cancelled');
+    }
+
+    // Get authentication tokens
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
+
+    // Create Firebase credential
+    final AuthCredential credential =
+        GoogleAuthProvider.credential(
       accessToken: googleAuth.accessToken,
       idToken: googleAuth.idToken,
     );
 
-    final currentUser = _auth.currentUser;
+    final User? currentUser = _auth.currentUser;
+
+    // If anonymous user exists -> link account
     if (currentUser != null && currentUser.isAnonymous) {
       try {
-        return await _linkWithCredentialResilient(currentUser, credential);
+        return await currentUser.linkWithCredential(
+          credential,
+        );
       } on FirebaseAuthException catch (e) {
-        // Account already exists — delete anonymous user and sign in directly
+        // Account already exists
         if (e.code == 'credential-already-in-use' ||
             e.code == 'email-already-in-use' ||
-            e.code == 'account-exists-with-different-credential') {
+            e.code ==
+                'account-exists-with-different-credential') {
           try {
             await currentUser.delete();
           } catch (_) {}
-          return _signInWithCredentialResilient(e.credential ?? credential);
+
+          return await _auth.signInWithCredential(
+            credential,
+          );
         }
+
         rethrow;
       }
     }
-    return _signInWithCredentialResilient(credential);
+
+    // Normal Google sign in
+    return await _auth.signInWithCredential(
+      credential,
+    );
   }
 
-  // ── Apple ──────────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // Apple Sign In
+  // ─────────────────────────────────────────────────────────────
+
   Future<UserCredential> signInWithApple() async {
-    // Sign in with Apple does not work on iOS Simulator.
-    // It requires a real device with an Apple ID signed in via Settings.
+    // Apple Sign-In does not work on iOS Simulator
     if (defaultTargetPlatform == TargetPlatform.iOS &&
         !kIsWeb &&
         await _isSimulator()) {
@@ -159,72 +117,128 @@ class AuthService {
       );
     }
 
-    final appleCredential = await SignInWithApple.getAppleIDCredential(
+    final appleCredential =
+        await SignInWithApple.getAppleIDCredential(
       scopes: [
         AppleIDAuthorizationScopes.email,
         AppleIDAuthorizationScopes.fullName,
       ],
     );
 
-    // Same race as Google sign-in: ASWebAuthenticationSession / SFSafariVC
-    // causes a view-controller transition that can disrupt the Pigeon binding.
-    await _warmUpAuthChannel();
-
-    final oauthCredential = OAuthProvider('apple.com').credential(
+    final oauthCredential =
+        OAuthProvider('apple.com').credential(
       idToken: appleCredential.identityToken,
-      accessToken: appleCredential.authorizationCode,
+      accessToken:
+          appleCredential.authorizationCode,
     );
 
     final currentUser = _auth.currentUser;
-    if (currentUser != null && currentUser.isAnonymous) {
+
+    // Link anonymous account
+    if (currentUser != null &&
+        currentUser.isAnonymous) {
       try {
-        return await _linkWithCredentialResilient(currentUser, oauthCredential);
+        return await currentUser
+            .linkWithCredential(oauthCredential);
       } on FirebaseAuthException catch (e) {
-        if (e.code == 'credential-already-in-use' ||
-            e.code == 'email-already-in-use' ||
-            e.code == 'account-exists-with-different-credential') {
-          return _signInWithCredentialResilient(
-              e.credential ?? oauthCredential);
+        if (e.code ==
+                'credential-already-in-use' ||
+            e.code ==
+                'email-already-in-use' ||
+            e.code ==
+                'account-exists-with-different-credential') {
+          try {
+            await currentUser.delete();
+          } catch (_) {}
+
+          return await _auth
+              .signInWithCredential(
+            oauthCredential,
+          );
         }
+
         rethrow;
       }
     }
-    return _signInWithCredentialResilient(oauthCredential);
+
+    // Normal Apple sign in
+    return await _auth.signInWithCredential(
+      oauthCredential,
+    );
   }
 
-  /// Returns true when running inside the iOS Simulator.
   Future<bool> _isSimulator() async {
-    // sign_in_with_apple exposes a static availability check
     return !await SignInWithApple.isAvailable();
   }
 
-  // ── Email/Password ─────────────────────────────────────────────────────────
-  Future<UserCredential> createWithEmail(String email, String password) =>
-      _auth.createUserWithEmailAndPassword(
-          email: email.trim(), password: password);
+  // ─────────────────────────────────────────────────────────────
+  // Email / Password
+  // ─────────────────────────────────────────────────────────────
 
-  Future<UserCredential> signInWithEmail(String email, String password) =>
-      _auth.signInWithEmailAndPassword(
-          email: email.trim(), password: password);
-
-  // ── Password reset ─────────────────────────────────────────────────────────
-  Future<void> sendPasswordReset(String email) =>
-      _auth.sendPasswordResetEmail(email: email.trim());
-
-  // ── Link anonymous account to email/password ───────────────────────────────
-  Future<UserCredential> linkEmailToAnonymous(
-      String email, String password) async {
-    final credential =
-        EmailAuthProvider.credential(email: email.trim(), password: password);
-    return _auth.currentUser!.linkWithCredential(credential);
+  Future<UserCredential> createWithEmail(
+    String email,
+    String password,
+  ) {
+    return _auth.createUserWithEmailAndPassword(
+      email: email.trim(),
+      password: password,
+    );
   }
 
-  // ── Sign out ───────────────────────────────────────────────────────────────
+  Future<UserCredential> signInWithEmail(
+    String email,
+    String password,
+  ) {
+    return _auth.signInWithEmailAndPassword(
+      email: email.trim(),
+      password: password,
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Password Reset
+  // ─────────────────────────────────────────────────────────────
+
+  Future<void> sendPasswordReset(
+    String email,
+  ) {
+    return _auth.sendPasswordResetEmail(
+      email: email.trim(),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Link Email To Anonymous
+  // ─────────────────────────────────────────────────────────────
+
+  Future<UserCredential> linkEmailToAnonymous(
+    String email,
+    String password,
+  ) async {
+    final credential =
+        EmailAuthProvider.credential(
+      email: email.trim(),
+      password: password,
+    );
+
+    return await _auth.currentUser!
+        .linkWithCredential(credential);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Sign Out
+  // ─────────────────────────────────────────────────────────────
+
   Future<void> signOut() async {
     await GoogleSignIn().signOut();
     await _auth.signOut();
   }
 
-  // ── Delete account ─────────────────────────────────────────────────────────
-  Future<void> deleteAccount() => _auth.currentUser!.delete();
+  // ─────────────────────────────────────────────────────────────
+  // Delete Account
+  // ─────────────────────────────────────────────────────────────
+
+  Future<void> deleteAccount() async {
+    await _auth.currentUser?.delete();
+  }
 }

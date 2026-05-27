@@ -14,7 +14,12 @@ import '../providers/lesson_provider.dart';
 import '../widgets/waveform_widget.dart';
 
 class LessonScreen extends ConsumerStatefulWidget {
-  const LessonScreen({super.key});
+  const LessonScreen({super.key, this.practicePhrase});
+
+  /// When set, the lesson is a focused single-phrase drill on this text
+  /// (e.g. coming from a translation screen). When null, a full AI lesson
+  /// is generated as usual.
+  final String? practicePhrase;
 
   @override
   ConsumerState<LessonScreen> createState() => _LessonScreenState();
@@ -24,7 +29,11 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(lessonProvider.notifier).loadLesson());
+    Future.microtask(
+      () => ref
+          .read(lessonProvider.notifier)
+          .loadLesson(practicePhrase: widget.practicePhrase),
+    );
   }
 
   @override

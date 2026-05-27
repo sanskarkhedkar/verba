@@ -96,10 +96,50 @@ class LessonController extends StateNotifier<LessonState> {
 
   // ── Lesson loading ────────────────────────────────────────────────────────────
 
-  Future<void> loadLesson() async {
+  Future<void> loadLesson({String? practicePhrase}) async {
     state = state.copyWith(loading: true, clearFeedback: true, clearError: true);
     try {
       final context = ref.read(onboardingProvider);
+
+      // ── Practice-phrase mode: instant single-turn drill ─────────────────────
+      if (practicePhrase != null && practicePhrase.trim().isNotEmpty) {
+        final phrase = practicePhrase.trim();
+        // Ask Gemini for a phonetic guide — lightweight, fast call.
+        String phonetic = '';
+        try {
+          final guide = await ref
+              .read(geminiServiceProvider)
+              .getPhoneticGuide(phrase, context.targetLanguage);
+          phonetic = guide;
+        } catch (_) {
+          // Non-critical — leave phonetic empty if it fails.
+        }
+
+        final turn = LessonTurn(
+          prompt: 'Say the phrase you just translated.',
+          targetPhrase: phrase,
+          phoneticGuide: phonetic,
+          evaluationFocus: 'Accurate pronunciation of the translated phrase',
+          successFeedback: 'Perfect! You nailed the pronunciation.',
+          correctionHint: 'Focus on each syllable. Try once more.',
+        );
+
+        final lesson = Lesson(
+          id: 'phrase_drill',
+          title: 'Phrase Practice',
+          theme: phrase,
+          turns: [turn],
+        );
+
+        state = LessonState(lesson: lesson);
+        ref.read(analyticsServiceProvider).logLessonStart(
+              context.targetLanguage, 'Phrase Practice: $phrase');
+
+        _preloadTurnAudio(turn, context.targetLanguage);
+        return;
+      }
+
+      // ── Normal mode: full AI-generated lesson ────────────────────────────────
       final lesson =
           await ref.read(geminiServiceProvider).generateLesson(context);
       state = LessonState(lesson: lesson);
@@ -164,18 +204,19 @@ class LessonController extends StateNotifier<LessonState> {
         if (state.micState == MicState.listening) stopRecording();
       });
 
-      // Silence detection: 3s of silence auto-stops recording
+      // Silence detection: 4s of true silence auto-stops recording
       final startTime = DateTime.now();
       _amplitudeSub = _recorder
           .onAmplitudeChanged(const Duration(milliseconds: 200))
           .listen((amp) {
         if (!mounted) return;
-        // Ignore first second to avoid immediate stop
-        if (DateTime.now().difference(startTime) < const Duration(seconds: 1)) {
+        // Ignore first 1.5 seconds to avoid triggering on mic startup noise
+        if (DateTime.now().difference(startTime) <
+            const Duration(milliseconds: 1500)) {
           return;
         }
-        if (amp.current < -40) {
-          _silenceTimer ??= Timer(const Duration(seconds: 3), () {
+        if (amp.current < -50) {
+          _silenceTimer ??= Timer(const Duration(seconds: 4), () {
             if (state.micState == MicState.listening) stopRecording();
           });
         } else {

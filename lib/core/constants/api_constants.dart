@@ -30,4 +30,5 @@ abstract final class ApiConstants {
   // Timeouts
   static const apiTimeoutSeconds = 30;
   static const lessonGenerationTimeoutSeconds = 45;
+  static const audioTranscriptionTimeoutSeconds = 60;
 }

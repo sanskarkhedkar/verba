@@ -39,7 +39,7 @@
         <!-- FCM default notification channel (Android 8+) -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="verba_general" />
+            android:value="verba_daily_reminder" />
 
         <!-- flutter_local_notifications: schedule daily reminders + reschedule after boot -->
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />

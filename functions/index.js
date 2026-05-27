@@ -226,6 +226,40 @@ Fallback hint if needed: ${correctionHint}`;
   },
 );
 
+exports.getPhoneticGuide = callable(
+  {secrets: [geminiApiKey], timeoutSeconds: 30, memory: "256MiB"},
+  async (request) => {
+    const phrase = asString(request.data?.phrase);
+    const language = asString(request.data?.language, "English");
+    if (!phrase) {
+      throw new HttpsError("invalid-argument", "phrase is required.");
+    }
+
+    const prompt = `Provide a simple, readable phonetic pronunciation guide for the following phrase in ${language}.
+
+Phrase: "${phrase}"
+
+Rules:
+- Write phonetics using uppercase syllables to show stress (e.g. "GOO-ten MOR-gen")
+- Use simple English letter combinations that an English speaker would naturally read correctly
+- Separate syllables with hyphens
+- Separate words with spaces
+- Return ONLY valid JSON, no markdown: {"phonetic": "YOUR_PHONETIC_HERE"}`;
+
+    const json = await callGemini({
+      contents: [{parts: [{text: prompt}]}],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 128,
+        responseMimeType: "application/json",
+        thinkingConfig: {thinkingBudget: 0},
+      },
+    });
+
+    return parseJsonText(extractGeminiText(json));
+  },
+);
+
 exports.transcribeAudio = callable(
   {secrets: [geminiApiKey], timeoutSeconds: 60, memory: "1GiB"},
   async (request) => {

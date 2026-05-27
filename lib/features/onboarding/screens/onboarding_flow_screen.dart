@@ -139,6 +139,10 @@ class _OnboardingFlowScreenState extends ConsumerState<OnboardingFlowScreen> {
             subtitle: 'Daily utility gives you a real reason to open the app.',
             kind: _StepKind.social),
         _OnboardingStep(
+            title: 'Stay on track',
+            subtitle: 'A daily nudge keeps your streak alive.',
+            kind: _StepKind.notifications),
+        _OnboardingStep(
             title: 'Unlock unlimited speaking',
             subtitle: 'One plan. Full access.',
             kind: _StepKind.paywall),

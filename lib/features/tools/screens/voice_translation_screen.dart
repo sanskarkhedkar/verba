@@ -160,35 +160,42 @@ class _VoiceTranslationScreenState
         if (mounted) {
           setState(() {
             _isProcessing = false;
-            _error = 'No speech detected. Try speaking clearly into the mic.';
+            _error =
+                'No speech detected. Please tap the mic, speak clearly, then tap again to stop.';
           });
         }
         return;
       }
 
       final trimmedTranscript = transcript.trim();
-      final translationService = ref.read(translationServiceProvider);
-      final matchesLanguage = await translationService.matchesInputLanguage(
-        trimmedTranscript,
-        _sourceLang,
-      );
-      if (!matchesLanguage) {
-        if (mounted) {
-          setState(() {
-            _isProcessing = false;
-            _transcript = null;
-            _translation = null;
-          });
-          _showLanguageMismatchDialog(_sourceLang);
+
+      // Only run language mismatch check on longer phrases — short words are
+      // unreliable to detect and frequently cause false-positives.
+      final wordCount = trimmedTranscript.split(RegExp(r'\s+')).length;
+      if (wordCount > 3) {
+        final translationService = ref.read(translationServiceProvider);
+        final matchesLanguage = await translationService.matchesInputLanguage(
+          trimmedTranscript,
+          _sourceLang,
+        );
+        if (!matchesLanguage) {
+          if (mounted) {
+            setState(() {
+              _isProcessing = false;
+              _transcript = null;
+              _translation = null;
+            });
+            _showLanguageMismatchDialog(_sourceLang);
+          }
+          return;
         }
-        return;
       }
 
-      final result = await translationService.translateText(
-        trimmedTranscript,
-        sourceLang: _sourceLang,
-        targetLang: _resolvedTargetLang,
-      );
+      final result = await ref.read(translationServiceProvider).translateText(
+            trimmedTranscript,
+            sourceLang: _sourceLang,
+            targetLang: _resolvedTargetLang,
+          );
 
       if (mounted) {
         setState(() {
@@ -208,7 +215,8 @@ class _VoiceTranslationScreenState
       if (mounted) {
         setState(() {
           _isProcessing = false;
-          _error = 'Translation failed: $e';
+          _error =
+              'Translation failed. Check your connection and try again.';
         });
       }
     }
@@ -350,8 +358,10 @@ class _VoiceTranslationScreenState
                           VerbaButton(
                             label: 'Practice this phrase',
                             icon: Icons.record_voice_over_rounded,
-                            onPressed: () =>
-                                context.push(RouteConstants.lesson),
+                            onPressed: () => context.push(
+                              RouteConstants.lesson,
+                              extra: _translation,
+                            ),
                           ),
                         ],
                       ),

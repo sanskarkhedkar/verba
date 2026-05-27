@@ -53,36 +53,40 @@ class GeminiService {
     );
   }
 
+  // ── Phonetic Guide ───────────────────────────────────────────────────────────
+
+  /// Returns a phonetic pronunciation guide for [phrase] in [language].
+  /// E.g. "Guten Morgen" → "GOO-ten MOR-gen"
+  Future<String> getPhoneticGuide(String phrase, String language) async {
+    final json = await _functions.call(
+      'getPhoneticGuide',
+      {'phrase': phrase, 'language': language},
+      timeout: const Duration(seconds: ApiConstants.apiTimeoutSeconds),
+    );
+    return json['phonetic'] as String? ?? '';
+  }
+
   // ── Speech Evaluation ────────────────────────────────────────────────────────
+
 
   Future<SpeechFeedback> evaluateSpeech(
     LessonTurn turn,
     String transcription,
   ) async {
-    try {
-      final evalJson = await _functions.call(
-        'evaluateSpeech',
-        {
-          'turn': {
-            'targetPhrase': turn.targetPhrase,
-            'phoneticGuide': turn.phoneticGuide,
-            'evaluationFocus': turn.evaluationFocus,
-            'correctionHint': turn.correctionHint,
-          },
-          'transcription': transcription,
+    final evalJson = await _functions.call(
+      'evaluateSpeech',
+      {
+        'turn': {
+          'targetPhrase': turn.targetPhrase,
+          'phoneticGuide': turn.phoneticGuide,
+          'evaluationFocus': turn.evaluationFocus,
+          'correctionHint': turn.correctionHint,
         },
-        timeout: const Duration(seconds: ApiConstants.apiTimeoutSeconds),
-      );
-      return _parseFeedback(evalJson, turn);
-    } catch (_) {
-      return SpeechFeedback(
-        accuracy: 75,
-        pronunciation: 72,
-        fluency: 78,
-        type: FeedbackType.warning,
-        message: 'Almost there. ${turn.correctionHint}',
-      );
-    }
+        'transcription': transcription,
+      },
+      timeout: const Duration(seconds: ApiConstants.apiTimeoutSeconds),
+    );
+    return _parseFeedback(evalJson, turn);
   }
 
   SpeechFeedback _parseFeedback(
@@ -113,24 +117,21 @@ class GeminiService {
   // ── Audio Transcription (Gemini multimodal) ──────────────────────────────────
 
   Future<String> transcribeAudio(File audioFile, String languageHint) async {
-    try {
-      final bytes = await audioFile.readAsBytes();
-      final base64Audio = base64Encode(bytes);
+    final bytes = await audioFile.readAsBytes();
+    final base64Audio = base64Encode(bytes);
 
-      final json = await _functions.call(
-        'transcribeAudio',
-        {
-          'audioBase64': base64Audio,
-          'mimeType': 'audio/wav',
-          'languageHint': languageHint,
-        },
-        timeout: const Duration(seconds: ApiConstants.apiTimeoutSeconds),
-      );
+    final json = await _functions.call(
+      'transcribeAudio',
+      {
+        'audioBase64': base64Audio,
+        'mimeType': 'audio/wav',
+        'languageHint': languageHint,
+      },
+      timeout: const Duration(
+          seconds: ApiConstants.audioTranscriptionTimeoutSeconds),
+    );
 
-      return json['transcription'] as String? ?? '';
-    } catch (_) {
-      return '';
-    }
+    return json['transcription'] as String? ?? '';
   }
 
   // ── Fallback lesson (offline / API key not set) ───────────────────────────────

@@ -307,7 +307,10 @@ class _TextTranslationScreenState extends ConsumerState<TextTranslationScreen> {
                   else if (state.result != null)
                     _ResultCard(
                       result: state.result!,
-                      onPractice: () => context.push(RouteConstants.lesson),
+                      onPractice: () => context.push(
+                        RouteConstants.lesson,
+                        extra: state.result!.translatedText,
+                      ),
                       onListen: () => ref.read(elevenLabsServiceProvider).speak(
                           state.result!.translatedText,
                           state.result!.targetLang),

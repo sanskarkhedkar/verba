@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:speech_to_text/speech_to_text.dart';
@@ -12,8 +13,13 @@ class SttService {
   /// Transcribes [audioFile] (WAV, 16kHz mono) using Gemini multimodal API.
   /// Falls back to native STT if Gemini fails or returns empty.
   Future<String> transcribeAudio(File audioFile, String languageHint) async {
-    final geminiResult = await _gemini.transcribeAudio(audioFile, languageHint);
-    if (geminiResult.isNotEmpty) return geminiResult;
+    try {
+      final geminiResult =
+          await _gemini.transcribeAudio(audioFile, languageHint);
+      if (geminiResult.isNotEmpty) return geminiResult;
+    } catch (_) {
+      // Fall through to native STT
+    }
     return _transcribeNative(languageHint);
   }
 
@@ -23,23 +29,38 @@ class SttService {
     if (!available) return '';
 
     final localeId = _localeFor(language);
-    var result = '';
+    final completer = Completer<String>();
+    var finalResult = '';
 
     await stt.listen(
-      onResult: (r) => result = r.recognizedWords,
+      onResult: (r) {
+        if (r.finalResult) {
+          finalResult = r.recognizedWords;
+          if (!completer.isCompleted) completer.complete(finalResult);
+        } else {
+          finalResult = r.recognizedWords;
+        }
+      },
       localeId: localeId,
-      listenFor: const Duration(seconds: 5),
-      pauseFor: const Duration(seconds: 2),
+      listenFor: const Duration(seconds: 10),
+      pauseFor: const Duration(seconds: 3),
+      cancelOnError: true,
+      partialResults: true,
     );
 
-    // Wait for listening to complete
-    await Future<void>.delayed(const Duration(seconds: 6));
+    // Wait for final result or timeout after 12s
+    await Future.any([
+      completer.future,
+      Future<void>.delayed(const Duration(seconds: 12)),
+    ]);
+
     await stt.stop();
-    return result;
+    return finalResult;
   }
 
   String _localeFor(String language) {
     const locales = {
+      'English': 'en-US',
       'German': 'de-DE',
       'Spanish': 'es-ES',
       'French': 'fr-FR',
@@ -50,7 +71,13 @@ class SttService {
       'Portuguese': 'pt-BR',
       'Hindi': 'hi-IN',
       'Arabic': 'ar-SA',
+      'Turkish': 'tr-TR',
+      'Dutch': 'nl-NL',
+      'Polish': 'pl-PL',
+      'Russian': 'ru-RU',
+      'Swedish': 'sv-SE',
     };
     return locales[language] ?? 'en-US';
   }
 }
+

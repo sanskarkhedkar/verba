@@ -69,7 +69,9 @@ class _VerbaAppState extends ConsumerState<VerbaApp> {
         // ── Learn ─────────────────────────────────────────────────────────────
         GoRoute(
           path: RouteConstants.lesson,
-          builder: (context, state) => const LessonScreen(),
+          builder: (context, state) => LessonScreen(
+            practicePhrase: state.extra as String?,
+          ),
         ),
         GoRoute(
           path: RouteConstants.lessonComplete,

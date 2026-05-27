@@ -359,7 +359,10 @@ class _ImageView extends StatelessWidget {
                 VerbaButton(
                   label: 'Practice these phrases',
                   icon: Icons.record_voice_over_rounded,
-                  onPressed: () => context.push(RouteConstants.lesson),
+                  onPressed: () => context.push(
+                    RouteConstants.lesson,
+                    extra: translation,
+                  ),
                 ),
               ],
             ),
