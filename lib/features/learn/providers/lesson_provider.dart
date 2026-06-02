@@ -258,6 +258,23 @@ class LessonController extends StateNotifier<LessonState> {
               )
           : '';
 
+      // If transcription is completely empty, give immediate feedback
+      // instead of sending to Gemini which may time out or return gibberish.
+      if (transcription.trim().isEmpty) {
+        state = state.copyWith(
+          micState: MicState.error,
+          feedback: SpeechFeedback(
+            accuracy: 0,
+            pronunciation: 0,
+            fluency: 0,
+            type: FeedbackType.error,
+            message:
+                'No speech was detected. Tap the mic and speak the phrase clearly.',
+          ),
+        );
+        return;
+      }
+
       final result = await ref
           .read(geminiServiceProvider)
           .evaluateSpeech(turn, transcription);
@@ -287,16 +304,31 @@ class LessonController extends StateNotifier<LessonState> {
             .speakSlow(turn.targetPhrase, language);
       }
     } catch (e) {
-      await _recorder.stop();
+      // ignore: avoid_print
+      print('[LessonController] stopRecording error: $e');
+      try {
+        await _recorder.stop();
+      } catch (_) {}
       state = state.copyWith(
-        micState: MicState.idle,
-        errorMessage: 'Evaluation failed. Please try again.',
+        micState: MicState.error,
+        feedback: SpeechFeedback(
+          accuracy: 0,
+          pronunciation: 0,
+          fluency: 0,
+          type: FeedbackType.error,
+          message:
+              'Evaluation failed — please try again. Make sure you have a stable internet connection.',
+        ),
       );
     }
   }
 
   void retry() {
-    state = state.copyWith(micState: MicState.idle, clearFeedback: true);
+    state = state.copyWith(
+      micState: MicState.idle,
+      clearFeedback: true,
+      clearError: true,
+    );
   }
 
   void nextTurn() {

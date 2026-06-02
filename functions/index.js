@@ -91,7 +91,14 @@ function parseJsonText(text) {
 
 function extractGeminiText(json) {
   const parts = json?.candidates?.[0]?.content?.parts || [];
-  return asString(parts[0]?.text);
+  // When thinking is enabled, the model may return thinking in parts[0]
+  // and the actual response in a later part. Take the last non-empty text.
+  let text = "";
+  for (const part of parts) {
+    const t = asString(part?.text);
+    if (t) text = t;
+  }
+  return text;
 }
 
 async function callGemini(body) {
@@ -219,6 +226,7 @@ Fallback hint if needed: ${correctionHint}`;
         temperature: 0.3,
         maxOutputTokens: 256,
         responseMimeType: "application/json",
+        thinkingConfig: {thinkingBudget: 0},
       },
     });
 

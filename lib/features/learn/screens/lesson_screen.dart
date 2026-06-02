@@ -105,6 +105,42 @@ class _LessonScreenState extends ConsumerState<LessonScreen> {
                                   onNext: controller.nextTurn,
                                 ),
                               ],
+                              if (state.errorMessage != null &&
+                                  state.feedback == null) ...[
+                                const SizedBox(height: AppSpacing.lg),
+                                GlassCard(
+                                  padding:
+                                      const EdgeInsets.all(AppSpacing.lg),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Something went wrong',
+                                        style: AppTypography.heading3
+                                            .copyWith(
+                                                color: AppColors.error),
+                                      ),
+                                      const SizedBox(
+                                          height: AppSpacing.sm),
+                                      Text(
+                                        state.errorMessage!,
+                                        style: AppTypography.bodyS
+                                            .copyWith(
+                                                color: AppColors
+                                                    .textSecondary),
+                                      ),
+                                      const SizedBox(
+                                          height: AppSpacing.lg),
+                                      VerbaButton(
+                                        label: 'Try again',
+                                        icon: Icons.refresh_rounded,
+                                        onPressed: controller.retry,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
