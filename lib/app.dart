@@ -69,9 +69,23 @@ class _VerbaAppState extends ConsumerState<VerbaApp> {
         // ── Learn ─────────────────────────────────────────────────────────────
         GoRoute(
           path: RouteConstants.lesson,
-          builder: (context, state) => LessonScreen(
-            practicePhrase: state.extra as String?,
-          ),
+          builder: (context, state) {
+            final extra = state.extra;
+            // Support both plain String extra (practice phrase from translation
+            // screens) and Map extra (module-specific lessons).
+            String? practicePhrase;
+            String? moduleCategory;
+            if (extra is String) {
+              practicePhrase = extra;
+            } else if (extra is Map<String, dynamic>) {
+              practicePhrase = extra['practicePhrase'] as String?;
+              moduleCategory = extra['moduleCategory'] as String?;
+            }
+            return LessonScreen(
+              practicePhrase: practicePhrase,
+              moduleCategory: moduleCategory,
+            );
+          },
         ),
         GoRoute(
           path: RouteConstants.lessonComplete,

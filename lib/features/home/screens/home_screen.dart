@@ -269,7 +269,8 @@ class _LearnTab extends ConsumerWidget {
                 icon: Icons.flight_rounded,
                 locked: !isPremium,
                 onTap: () => isPremium
-                    ? context.push(RouteConstants.lesson)
+                    ? context.push(RouteConstants.lesson,
+                        extra: {'moduleCategory': 'travel'})
                     : context.push(RouteConstants.paywall),
               ),
               _MiniLessonCard(
@@ -277,7 +278,8 @@ class _LearnTab extends ConsumerWidget {
                 icon: Icons.restaurant_rounded,
                 locked: !isPremium,
                 onTap: () => isPremium
-                    ? context.push(RouteConstants.lesson)
+                    ? context.push(RouteConstants.lesson,
+                        extra: {'moduleCategory': 'restaurant'})
                     : context.push(RouteConstants.paywall),
               ),
               _MiniLessonCard(
@@ -285,7 +287,8 @@ class _LearnTab extends ConsumerWidget {
                 icon: Icons.record_voice_over_rounded,
                 locked: !isPremium,
                 onTap: () => isPremium
-                    ? context.push(RouteConstants.lesson)
+                    ? context.push(RouteConstants.lesson,
+                        extra: {'moduleCategory': 'pronunciation'})
                     : context.push(RouteConstants.paywall),
               ),
             ],

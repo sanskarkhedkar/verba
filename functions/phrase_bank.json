@@ -1,0 +1,67 @@
+{
+  "A1": {
+    "restaurant": [
+      "I would like a table for two.",
+      "Could I see the menu, please?",
+      "I will have the chicken.",
+      "The bill, please.",
+      "A glass of water, please.",
+      "Is there a vegetarian option?",
+      "Can I pay by card?"
+    ],
+    "travel": [
+      "Where is the train station?",
+      "How much does this cost?",
+      "I need a taxi.",
+      "One ticket to the city center, please.",
+      "Which platform is it?",
+      "Where can I find a pharmacy?",
+      "How far is the hotel?"
+    ],
+    "work": [
+      "I work in marketing.",
+      "When is the meeting?",
+      "Here is my business card.",
+      "Could you repeat that, please?",
+      "I will send you an email.",
+      "What is the deadline?"
+    ],
+    "everyday": [
+      "How are you?",
+      "I am fine, thank you.",
+      "What time is it?",
+      "See you tomorrow.",
+      "Excuse me, where is the bathroom?",
+      "I would like a coffee, please."
+    ],
+    "pronunciation": [
+      "Thank you very much.",
+      "Excuse me, can you help me?",
+      "I do not understand.",
+      "Could you speak more slowly?",
+      "How do you say this?",
+      "Please repeat that."
+    ]
+  },
+  "A2": {
+    "restaurant": [
+      "Do you have any vegetarian options?",
+      "I would like my steak medium rare.",
+      "Can we split the bill?",
+      "Could we sit by the window?",
+      "What do you recommend?"
+    ],
+    "travel": [
+      "I have a reservation under my name.",
+      "Is breakfast included?",
+      "What time is checkout?",
+      "Can you call me a taxi to the airport?"
+    ],
+    "pronunciation": [
+      "I have been learning for three months.",
+      "Could you write that down for me?",
+      "I think I need more practice.",
+      "That is a difficult word to pronounce."
+    ]
+  }
+}

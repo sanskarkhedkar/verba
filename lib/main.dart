@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +36,13 @@ Future<void> main() async {
     await Firebase.initializeApp(options: firebaseOptions);
     await const FirebaseBootstrapService().configure();
     currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+    // Wire up Crashlytics — captures all Flutter framework errors and
+    // unhandled platform exceptions automatically.
+    final crashlytics = FirebaseCrashlytics.instance;
+    // Disable in debug mode so we don't pollute the dashboard during dev.
+    await crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode);
+    FlutterError.onError = crashlytics.recordFlutterFatalError;
     // Warm the firebase_auth Pigeon channel (FirebaseAuthHostApi) on cold
     // start. signOut() is a genuine FirebaseAuthHostApi call and a true no-op
     // when no user is signed in — this ensures the binding is ready before
@@ -77,5 +88,8 @@ Future<void> main() async {
     // Notifications are non-blocking — continue if scheduling fails.
   }
 
-  runApp(ProviderScope(child: VerbaApp(initialRoute: initialRoute)));
+  runZonedGuarded(
+    () => runApp(ProviderScope(child: VerbaApp(initialRoute: initialRoute))),
+    FirebaseCrashlytics.instance.recordError,
+  );
 }

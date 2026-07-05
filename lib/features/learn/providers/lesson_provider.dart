@@ -96,13 +96,17 @@ class LessonController extends StateNotifier<LessonState> {
 
   // ── Lesson loading ────────────────────────────────────────────────────────────
 
-  Future<void> loadLesson({String? practicePhrase}) async {
+  Future<void> loadLesson({String? practicePhrase, String? moduleCategory}) async {
     state = state.copyWith(loading: true, clearFeedback: true, clearError: true);
     try {
       var context = ref.read(onboardingProvider);
       final resolvedLang = ref.read(targetLanguageProvider);
       if (context.targetLanguage != resolvedLang) {
         context = context.copyWith(targetLanguage: resolvedLang);
+      }
+      // Override the onboarding goal if a specific module was selected.
+      if (moduleCategory != null && moduleCategory.isNotEmpty) {
+        context = context.copyWith(goalCategory: moduleCategory);
       }
 
       // ── Practice-phrase mode: instant single-turn drill ─────────────────────

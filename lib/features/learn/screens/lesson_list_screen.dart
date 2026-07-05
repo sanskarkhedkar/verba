@@ -20,7 +20,7 @@ class LessonListScreen extends ConsumerWidget {
         title: 'Greetings',
         subtitle: '7 phrases · 8 min',
         icon: Icons.waving_hand_rounded,
-        tag: 'basics'),
+        tag: 'everyday'),
     _LessonCategory(
         title: 'Travel Basics',
         subtitle: '10 phrases · 12 min',
@@ -30,17 +30,17 @@ class LessonListScreen extends ConsumerWidget {
         title: 'Restaurant & Food',
         subtitle: '9 phrases · 10 min',
         icon: Icons.restaurant_rounded,
-        tag: 'travel'),
+        tag: 'restaurant'),
     _LessonCategory(
         title: 'Shopping',
         subtitle: '8 phrases · 9 min',
         icon: Icons.shopping_bag_rounded,
-        tag: 'travel'),
+        tag: 'shopping'),
     _LessonCategory(
         title: 'Numbers & Time',
         subtitle: '10 phrases · 11 min',
         icon: Icons.schedule_rounded,
-        tag: 'basics'),
+        tag: 'everyday'),
     _LessonCategory(
         title: 'Directions',
         subtitle: '8 phrases · 9 min',
@@ -50,12 +50,12 @@ class LessonListScreen extends ConsumerWidget {
         title: 'Work & Business',
         subtitle: '12 phrases · 14 min',
         icon: Icons.work_rounded,
-        tag: 'business'),
+        tag: 'work'),
     _LessonCategory(
         title: 'Pronunciation Drill',
         subtitle: '5 phrases · 6 min',
         icon: Icons.record_voice_over_rounded,
-        tag: 'speaking'),
+        tag: 'pronunciation'),
   ];
 
   @override
@@ -106,8 +106,10 @@ class LessonListScreen extends ConsumerWidget {
                     final cat = _categories[i];
                     return _CategoryCard(
                       category: cat,
-                      onTap: () =>
-                          context.push(RouteConstants.lesson),
+                      onTap: () => context.push(
+                        RouteConstants.lesson,
+                        extra: {'moduleCategory': cat.tag},
+                      ),
                     );
                   },
                   childCount: _categories.length,

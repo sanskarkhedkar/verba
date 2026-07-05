@@ -23,6 +23,7 @@ class GeminiService {
           'targetLanguage': context.targetLanguage,
           'level': context.level,
           'goalCategory': context.goalCategory,
+          'userName': context.displayName,
         },
         timeout: Duration(seconds: ApiConstants.lessonGenerationTimeoutSeconds),
       );

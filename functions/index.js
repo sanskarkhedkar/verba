@@ -1,6 +1,7 @@
-// deploy: 2026-05-22 (raise generateLesson output tokens, disable thinking)
+// deploy: 2026-07-05 (phrase bank thematic reference + userName personalization)
 const {defineSecret} = require("firebase-functions/params");
 const {HttpsError, onCall} = require("firebase-functions/v2/https");
+const phraseBank = require("./phrase_bank.json");
 
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 const elevenLabsApiKey = defineSecret("ELEVENLABS_API_KEY");
@@ -147,30 +148,73 @@ exports.generateLesson = callable(
     const targetLanguage = asString(request.data?.targetLanguage, "German");
     const level = asString(request.data?.level, "A1");
     const goalCategory = asString(request.data?.goalCategory, "travel");
+    const userName = asString(request.data?.userName, "the user");
 
-    const prompt = `You are Verba's AI language tutor. Generate a structured speaking lesson.
+    // Build thematic context from phrase bank (inspiration only, not a strict list)
+    const levelPhrases = phraseBank[level] || phraseBank["A1"] || {};
+    const categoryPhrases = levelPhrases[goalCategory] ||
+      levelPhrases["everyday"] || [];
+    const examplesStr = categoryPhrases.length > 0
+      ? categoryPhrases.map((p) => `  - "${p}"`).join("\n")
+      : '  - (no examples available — use your own judgement for this topic)';
 
-Context:
-- User's native language: English
-- Target language: ${targetLanguage}
-- Current level: ${level}
-- Goal: ${goalCategory}
-- Lesson theme: Daily conversational practice
+    const prompt = `You are Verba, an expert AI language tutor specializing in spoken ${targetLanguage}.
 
-Generate a JSON lesson with exactly 7 speaking turns. Return ONLY valid JSON, no markdown.
+═══════════════════════════════════════
+LEARNER PROFILE
+═══════════════════════════════════════
+• Name: ${userName}
+• Native language: English
+• Target language: ${targetLanguage}
+• Proficiency level: ${level}
+• Lesson topic: ${goalCategory}
 
-Format:
+═══════════════════════════════════════
+THEMATIC REFERENCE (inspiration only)
+═══════════════════════════════════════
+The following example phrases illustrate the kind of vocabulary and situations
+this "${goalCategory}" lesson should cover:
+${examplesStr}
+
+These are EXAMPLES ONLY. Do NOT copy them verbatim.
+You MUST generate 7 completely new, original phrases that a real person would
+naturally use in a ${goalCategory} situation. Every lesson must feel fresh
+and different — never repeat phrases from previous lessons.
+
+═══════════════════════════════════════
+RULES
+═══════════════════════════════════════
+1. ALL 7 target phrases MUST stay strictly within the "${goalCategory}" topic.
+   Do NOT include generic greetings like "Good morning" or "Hello" unless
+   they are naturally part of a ${goalCategory} interaction (e.g. greeting
+   a waiter at a restaurant).
+2. If the learner's name is needed (introductions, reservations, etc.),
+   use "${userName}" — never use placeholders like "[Your Name]" or "...".
+3. Phrases must be appropriate for ${level} proficiency:
+   - A1: Very simple, short phrases (3-6 words)
+   - A2: Simple sentences, basic connectors
+   - B1: Moderately complex, polite forms
+   - B2+: Natural, nuanced expressions
+4. Phonetic guides must use uppercase stress markers and hyphens
+   (e.g. "GOO-ten MOR-gen"), readable by an English speaker.
+5. Each turn's evaluation_focus must be specific and actionable
+   (e.g. "Rising intonation on the question", not just "pronunciation").
+
+═══════════════════════════════════════
+OUTPUT FORMAT
+═══════════════════════════════════════
+Return ONLY valid JSON. No markdown, no code fences, no extra text.
 {
-  "title": "Lesson title",
-  "theme": "Brief theme description",
+  "title": "Short descriptive lesson title",
+  "theme": "One-line theme summary",
   "turns": [
     {
-      "ai_prompt_text": "What the AI tutor says to the user (in English)",
-      "target_phrase": "Phrase user should say in ${targetLanguage}",
-      "phonetic_guide": "Readable phonetic spelling",
-      "evaluation_focus": "What to evaluate",
-      "success_feedback": "Encouraging message on success",
-      "correction_hint": "Helpful hint on failure"
+      "ai_prompt_text": "What the tutor says to the learner in English",
+      "target_phrase": "Phrase learner should say in ${targetLanguage}",
+      "phonetic_guide": "Readable phonetic spelling with stress markers",
+      "evaluation_focus": "Specific aspect to evaluate",
+      "success_feedback": "Encouraging feedback on success",
+      "correction_hint": "Helpful hint if they struggle"
     }
   ]
 }`;
@@ -178,7 +222,7 @@ Format:
     const json = await callGemini({
       contents: [{parts: [{text: prompt}]}],
       generationConfig: {
-        temperature: 0.7,
+        temperature: 0.9,
         maxOutputTokens: 4096,
         responseMimeType: "application/json",
         thinkingConfig: {thinkingBudget: 0},
