@@ -1,5 +1,8 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -51,16 +54,16 @@ class LocalNotificationsService {
 
     var granted = true;
 
-    final androidImpl = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    final androidGranted = await androidImpl?.requestNotificationsPermission();
-    if (androidGranted != null) granted = androidGranted;
-
-    final iosImpl = _plugin.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>();
-    final iosGranted = await iosImpl?.requestPermissions(
-        alert: true, badge: true, sound: true);
-    if (iosGranted != null) granted = iosGranted;
+    if (Platform.isAndroid) {
+      final status = await Permission.notification.request();
+      granted = status.isGranted;
+    } else {
+      final iosImpl = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      final iosGranted = await iosImpl?.requestPermissions(
+          alert: true, badge: true, sound: true);
+      if (iosGranted != null) granted = iosGranted;
+    }
 
     return granted;
   }

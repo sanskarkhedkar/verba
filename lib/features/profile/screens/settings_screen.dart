@@ -26,6 +26,80 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   double _speechSpeed = 1.0;
   bool _isDeletingAccount = false;
 
+  // ── Notifications ────────────────────────────────────────────────────────────
+  bool _notificationsEnabled = false;
+  TimeOfDay _reminderTime = const TimeOfDay(hour: 19, minute: 0);
+
+  static const _prefKeyNotifEnabled = 'notif_enabled';
+  static const _prefKeyNotifTime = 'notif_time';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationPrefs();
+  }
+
+  Future<void> _loadNotificationPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool(_prefKeyNotifEnabled) ?? false;
+    final timeStr = prefs.getString(_prefKeyNotifTime) ?? '19:00';
+    final parts = timeStr.split(':');
+    final hour = int.tryParse(parts.first) ?? 19;
+    final minute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+    if (mounted) {
+      setState(() {
+        _notificationsEnabled = enabled;
+        _reminderTime = TimeOfDay(hour: hour, minute: minute);
+      });
+    }
+  }
+
+  Future<void> _saveNotificationPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefKeyNotifEnabled, _notificationsEnabled);
+    final hhmm =
+        '${_reminderTime.hour.toString().padLeft(2, '0')}:${_reminderTime.minute.toString().padLeft(2, '0')}';
+    await prefs.setString(_prefKeyNotifTime, hhmm);
+  }
+
+  Future<void> _onNotificationToggled(bool value) async {
+    final notifService = ref.read(localNotificationsServiceProvider);
+    if (value) {
+      final granted = await notifService.requestPermissions();
+      if (!granted) return;
+      final hhmm =
+          '${_reminderTime.hour.toString().padLeft(2, '0')}:${_reminderTime.minute.toString().padLeft(2, '0')}';
+      await notifService.scheduleDailyReminder(hhmm);
+    } else {
+      await notifService.cancelDailyReminder();
+    }
+    if (mounted) setState(() => _notificationsEnabled = value);
+    await _saveNotificationPrefs();
+  }
+
+  Future<void> _pickReminderTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _reminderTime,
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: Theme.of(ctx).colorScheme.copyWith(
+                primary: Theme.of(ctx).colorScheme.primary,
+              ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _reminderTime = picked);
+    await _saveNotificationPrefs();
+    if (_notificationsEnabled) {
+      final hhmm =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      await ref.read(localNotificationsServiceProvider).scheduleDailyReminder(hhmm);
+    }
+  }
+
   // ── Display name ────────────────────────────────────────────────────────────
   void _editDisplayName() {
     final profile = ref.read(userProfileStreamProvider).valueOrNull;
@@ -434,6 +508,35 @@ For questions about these terms, contact us at legal@verba.app''');
                         ? null
                         : () => context.push(RouteConstants.paywall),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
+            // Notifications section
+            _SectionHeader('Notifications'),
+            GlassCard(
+              child: Column(
+                children: [
+                  _SwitchRow(
+                    icon: Icons.notifications_outlined,
+                    title: 'Daily reminder',
+                    value: _notificationsEnabled,
+                    onChanged: _onNotificationToggled,
+                  ),
+                  if (_notificationsEnabled) ...[
+                    const Divider(height: 1, color: AppColors.glassBorder),
+                    _SettingRow(
+                      icon: Icons.access_time_rounded,
+                      title: 'Reminder time',
+                      trailing: Text(
+                        _reminderTime.format(context),
+                        style: AppTypography.bodyS
+                            .copyWith(color: AppColors.textSecondary),
+                      ),
+                      onTap: _pickReminderTime,
+                    ),
+                  ],
                 ],
               ),
             ),
