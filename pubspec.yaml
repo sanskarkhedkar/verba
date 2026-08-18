@@ -49,8 +49,8 @@ dependencies:
   sign_in_with_apple: ^8.0.0
 
   # Payments
-  purchases_flutter: ^8.10.6
-  purchases_ui_flutter: ^8.10.6
+  purchases_flutter: ^10.9.0
+  purchases_ui_flutter: ^10.9.0
 
   # Image / OCR
   image_picker: ^1.1.2
